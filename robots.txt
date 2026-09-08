@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://adrianezd.github.io/rush-royale-roguelike/sitemap.xml

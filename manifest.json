@@ -1,0 +1,10 @@
+{
+  "name": "Rush Royale Tower Defense",
+  "short_name": "Rush Royale TD",
+  "description": "Tower defense individual arcade roguelike",
+  "start_url": "/rush-royale-roguelike/",
+  "display": "fullscreen",
+  "background_color": "#1a1a2e",
+  "theme_color": "#e94560",
+  "icons": []
+}

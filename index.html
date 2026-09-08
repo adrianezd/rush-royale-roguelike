@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rush Royale Tower Defense</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Arial', sans-serif; background: #1a1a2e; color: #eee; overflow: hidden; }
+
+    #game-container { display: flex; height: 100vh; }
+    #game-canvas { flex: 1; background: linear-gradient(135deg, #0f3460, #16213e); border-right: 2px solid #e94560; }
+    #sidebar { width: 280px; background: #0f3460; border-left: 2px solid #e94560; display: flex; flex-direction: column; padding: 15px; overflow-y: auto; }
+
+    .header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #e94560; padding-bottom: 15px; }
+    .header h1 { font-size: 24px; color: #e94560; }
+    .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; font-size: 14px; }
+    .stat { background: rgba(233, 69, 96, 0.1); padding: 8px; border-radius: 4px; border-left: 3px solid #e94560; }
+
+    .tower-selector { margin-bottom: 20px; }
+    .tower-selector h3 { margin-bottom: 10px; color: #e94560; font-size: 16px; }
+    .tower-btn { width: 100%; padding: 12px; margin-bottom: 8px; background: #16213e; border: 2px solid #e94560; color: #eee; border-radius: 4px; cursor: pointer; font-size: 14px; transition: all 0.2s; }
+    .tower-btn:hover { background: #e94560; color: #1a1a2e; }
+    .tower-btn.selected { background: #e94560; color: #1a1a2e; }
+    .tower-icon { display: inline-block; width: 20px; height: 20px; margin-right: 8px; border-radius: 50%; vertical-align: middle; }
+
+    .tower-icon.fire { background: #e94560; }
+    .tower-icon.frost { background: #4ecdc4; }
+    .tower-icon.nature { background: #44b78b; }
+
+    .level-info { background: rgba(233, 69, 96, 0.1); padding: 12px; border-radius: 4px; margin-bottom: 20px; }
+    .level-info h3 { color: #e94560; margin-bottom: 8px; }
+    .level-info p { font-size: 13px; line-height: 1.6; }
+
+    .mana-bar { width: 100%; height: 24px; background: #0a0e27; border: 2px solid #4ecdc4; border-radius: 12px; margin-top: 8px; overflow: hidden; }
+    .mana-fill { height: 100%; background: linear-gradient(90deg, #4ecdc4, #44b78b); width: 0%; transition: width 0.3s; }
+
+    .tower-info { background: rgba(78, 205, 196, 0.1); padding: 12px; border-radius: 4px; margin-top: 15px; border-left: 3px solid #4ecdc4; }
+    .tower-info h4 { color: #4ecdc4; font-size: 13px; margin-bottom: 6px; }
+    .tower-info p { font-size: 12px; }
+
+    .controls { margin-top: auto; }
+    .btn-start { width: 100%; padding: 12px; background: #e94560; color: #1a1a2e; border: none; border-radius: 4px; font-size: 16px; font-weight: bold; cursor: pointer; transition: all 0.2s; }
+    .btn-start:hover { background: #ff6b7a; }
+    .btn-start:disabled { background: #666; cursor: not-allowed; }
+
+    canvas { display: block; }
+  </style>
+</head>
+<body>
+  <div id="game-container">
+    <canvas id="gameCanvas"></canvas>
+    <div id="sidebar">
+      <div class="header">
+        <h1>Rush Royale TD</h1>
+        <div class="stats">
+          <div class="stat">Nivel: <strong id="levelNum">1</strong></div>
+          <div class="stat">Olas: <strong id="waveNum">1</strong>/<strong id="waveMax">3</strong></div>
+          <div class="stat">Vidas: <strong id="lives">20</strong></div>
+          <div class="stat">Mana: <strong id="manaText">0</strong></div>
+        </div>
+      </div>
+
+      <div class="level-info">
+        <h3>Nivel Actual</h3>
+        <p id="levelDesc">Derrota a los primeros enemigos y construye tu ejército.</p>
+        <div class="mana-bar"><div class="mana-fill" id="manaBar"></div></div>
+      </div>
+
+      <div class="tower-selector">
+        <h3>Torres</h3>
+        <button class="tower-btn" onclick="selectTower('fire')">
+          <span class="tower-icon fire"></span> Fuego (Ataque)
+        </button>
+        <button class="tower-btn" onclick="selectTower('frost')">
+          <span class="tower-icon frost"></span> Hielo (Lentitud)
+        </button>
+        <button class="tower-btn" onclick="selectTower('nature')">
+          <span class="tower-icon nature"></span> Naturaleza (Rango)
+        </button>
+      </div>
+
+      <div class="tower-info" id="towerInfo" style="display:none;">
+        <h4 id="towerName"></h4>
+        <p id="towerDesc"></p>
+      </div>
+
+      <div class="controls">
+        <button class="btn-start" id="startBtn" onclick="startWave()">Iniciar Ola</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = window.innerWidth - 280;
+    canvas.height = window.innerHeight;
+
+    // Game state
+    const game = {
+      level: 1,
+      wave: 1,
+      maxWaves: 3,
+      lives: 20,
+      mana: 0,
+      maxMana: 100,
+      selectedTower: 'fire',
+      towers: [],
+      enemies: [],
+      isWaveActive: false,
+      levelDescriptions: [
+        'Derrota a los primeros enemigos y construye tu ejército.',
+        'Las olas se hacen más fuertes. Coloca torres estratégicamente.',
+        'Nivel intermedio. Necesitarás evolucionar tus torres.',
+        'Las cosas se ponen difíciles. Usa las evoluciones sabiamente.',
+        'Épico final. Demuestra tu dominio del juego.'
+      ]
+    };
+
+    const TOWER_TYPES = {
+      fire: { color: '#e94560', name: 'Fuego', desc: 'Ataque directo. Daño: 20', damage: 20, range: 120, speed: 1.0, manaCost: 30, evolved: false },
+      frost: { color: '#4ecdc4', name: 'Hielo', desc: 'Ralentiza enemigos. Daño: 10', damage: 10, range: 100, speed: 0.8, manaCost: 25, evolved: false },
+      nature: { color: '#44b78b', name: 'Naturaleza', desc: 'Rango extendido. Daño: 15', damage: 15, range: 140, speed: 1.2, manaCost: 35, evolved: false }
+    };
+
+    const LEVEL_CONFIGS = [
+      { enemies: 8, health: 20, speed: 1, reward: 15 },
+      { enemies: 12, health: 30, speed: 1.2, reward: 20 },
+      { enemies: 15, health: 40, speed: 1.4, reward: 25 },
+      { enemies: 20, health: 50, speed: 1.6, reward: 30 },
+      { enemies: 25, health: 60, speed: 1.8, reward: 35 }
+    ];
+
+    class Enemy {
+      constructor(x, y, level) {
+        this.x = x;
+        this.y = y;
+        this.radius = 8;
+        this.health = LEVEL_CONFIGS[level - 1].health;
+        this.maxHealth = this.health;
+        this.speed = LEVEL_CONFIGS[level - 1].speed;
+        this.vx = 2 * this.speed;
+        this.slowFactor = 1;
+      }
+
+      update() {
+        this.x += this.vx * this.slowFactor;
+        this.slowFactor = Math.min(1, this.slowFactor + 0.02);
+      }
+
+      draw() {
+        ctx.fillStyle = `hsl(0, 100%, ${50 + (this.health / this.maxHealth) * 30}%)`;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Health bar
+        ctx.fillStyle = '#333';
+        ctx.fillRect(this.x - 12, this.y - 18, 24, 3);
+        ctx.fillStyle = '#4ecdc4';
+        ctx.fillRect(this.x - 12, this.y - 18, 24 * (this.health / this.maxHealth), 3);
+      }
+
+      takeDamage(damage) {
+        this.health -= damage;
+        return this.health <= 0;
+      }
+
+      isOffscreen() {
+        return this.x > canvas.width;
+      }
+
+      applySlowdown(factor) {
+        this.slowFactor = Math.max(0.3, this.slowFactor * factor);
+      }
+    }
+
+    class Tower {
+      constructor(x, y, type) {
+        this.x = x;
+        this.y = y;
+        this.type = type;
+        this.radius = 15;
+        this.level = 1;
+        this.shootTimer = 0;
+        Object.assign(this, TOWER_TYPES[type]);
+      }
+
+      update() {
+        this.shootTimer++;
+        if (this.shootTimer > 60 / this.speed) {
+          const target = this.findTarget();
+          if (target) {
+            this.shoot(target);
+            this.shootTimer = 0;
+          }
+        }
+      }
+
+      findTarget() {
+        for (let enemy of game.enemies) {
+          const dist = Math.hypot(enemy.x - this.x, enemy.y - this.y);
+          if (dist < this.range) return enemy;
+        }
+        return null;
+      }
+
+      shoot(target) {
+        const dist = Math.hypot(target.x - this.x, target.y - this.y);
+        if (target.takeDamage(this.damage)) {
+          game.enemies = game.enemies.filter(e => e !== target);
+          game.mana = Math.min(game.maxMana, game.mana + LEVEL_CONFIGS[game.level - 1].reward);
+          updateUI();
+        }
+
+        if (this.type === 'frost') {
+          target.applySlowdown(0.6);
+        }
+      }
+
+      draw() {
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+        ctx.fill();
+
+        if (this.level > 1) {
+          ctx.fillStyle = '#FFD700';
+          ctx.font = 'bold 12px Arial';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText('Lv' + this.level, this.x, this.y);
+        }
+
+        // Range preview on hover
+        const mouseX = canvas.mouseX || -1000;
+        const mouseY = canvas.mouseY || -1000;
+        const distToMouse = Math.hypot(mouseX - this.x, mouseY - this.y);
+        if (distToMouse < 50) {
+          ctx.strokeStyle = 'rgba(233, 69, 96, 0.3)';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.arc(this.x, this.y, this.range, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+      }
+
+      evolve() {
+        if (this.level < 3) {
+          this.level++;
+          this.damage *= 1.3;
+          this.range *= 1.1;
+          this.speed *= 1.15;
+        }
+      }
+    }
+
+    function selectTower(type) {
+      game.selectedTower = type;
+      document.querySelectorAll('.tower-btn').forEach(btn => btn.classList.remove('selected'));
+      event.target.closest('.tower-btn').classList.add('selected');
+
+      const tower = TOWER_TYPES[type];
+      document.getElementById('towerName').textContent = tower.name;
+      document.getElementById('towerDesc').textContent = tower.desc + ` | Costo: ${tower.manaCost} maná`;
+      document.getElementById('towerInfo').style.display = 'block';
+    }
+
+    canvas.addEventListener('click', (e) => {
+      if (!game.isWaveActive) return;
+      const rect = canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+
+      const towerConfig = TOWER_TYPES[game.selectedTower];
+      if (game.mana >= towerConfig.manaCost) {
+        game.mana -= towerConfig.manaCost;
+        game.towers.push(new Tower(x, y, game.selectedTower));
+        updateUI();
+      }
+    });
+
+    canvas.addEventListener('mousemove', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      canvas.mouseX = e.clientX - rect.left;
+      canvas.mouseY = e.clientY - rect.top;
+    });
+
+    canvas.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      const rect = canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+
+      for (let i = 0; i < game.towers.length; i++) {
+        if (Math.hypot(game.towers[i].x - x, game.towers[i].y - y) < 20) {
+          const cost = Math.round(TOWER_TYPES[game.towers[i].type].manaCost * 0.5);
+          if (game.mana >= cost) {
+            game.mana -= cost;
+            game.towers[i].evolve();
+            updateUI();
+          }
+          break;
+        }
+      }
+    });
+
+    function startWave() {
+      if (game.isWaveActive || game.wave > game.maxWaves) return;
+      game.isWaveActive = true;
+      document.getElementById('startBtn').disabled = true;
+
+      const config = LEVEL_CONFIGS[game.level - 1];
+      let enemyCount = 0;
+      const spawnInterval = setInterval(() => {
+        if (enemyCount < config.enemies) {
+          game.enemies.push(new Enemy(0, Math.random() * (canvas.height - 60) + 30, game.level));
+          enemyCount++;
+        } else {
+          clearInterval(spawnInterval);
+        }
+      }, 300);
+    }
+
+    function updateUI() {
+      document.getElementById('levelNum').textContent = game.level;
+      document.getElementById('waveNum').textContent = game.wave;
+      document.getElementById('waveMax').textContent = game.maxWaves;
+      document.getElementById('lives').textContent = game.lives;
+      document.getElementById('manaText').textContent = game.mana;
+      document.getElementById('manaBar').style.width = (game.mana / game.maxMana) * 100 + '%';
+    }
+
+    function update() {
+      game.towers.forEach(tower => tower.update());
+      game.enemies.forEach(enemy => {
+        enemy.update();
+        if (enemy.isOffscreen()) {
+          game.lives--;
+          game.enemies = game.enemies.filter(e => e !== enemy);
+        }
+      });
+
+      if (game.isWaveActive && game.enemies.length === 0) {
+        if (game.wave < game.maxWaves) {
+          game.wave++;
+        } else {
+          game.wave = 1;
+          if (game.level < 5) {
+            game.level++;
+            document.getElementById('levelDesc').textContent = game.levelDescriptions[game.level - 1];
+          } else {
+            alert('¡Victoria! ¡Completaste todos los niveles!');
+            location.reload();
+          }
+        }
+        game.isWaveActive = false;
+        document.getElementById('startBtn').disabled = false;
+      }
+
+      if (game.lives <= 0) {
+        alert(`Game Over en Nivel ${game.level}, Ola ${game.wave}`);
+        location.reload();
+      }
+
+      updateUI();
+    }
+
+    function draw() {
+      ctx.fillStyle = '#0f3460';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Grid
+      ctx.strokeStyle = 'rgba(233, 69, 96, 0.1)';
+      ctx.lineWidth = 1;
+      for (let i = 0; i < canvas.width; i += 40) {
+        ctx.beginPath();
+        ctx.moveTo(i, 0);
+        ctx.lineTo(i, canvas.height);
+        ctx.stroke();
+      }
+
+      // Path indicator
+      ctx.strokeStyle = '#e94560';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([5, 5]);
+      ctx.beginPath();
+      ctx.moveTo(0, canvas.height / 2);
+      ctx.lineTo(canvas.width, canvas.height / 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      game.towers.forEach(tower => tower.draw());
+      game.enemies.forEach(enemy => enemy.draw());
+
+      // UI text
+      ctx.fillStyle = '#4ecdc4';
+      ctx.font = '14px Arial';
+      ctx.fillText(`Torres: ${game.towers.length} | Enemigos: ${game.enemies.length}`, 15, 25);
+    }
+
+    function gameLoop() {
+      update();
+      draw();
+      requestAnimationFrame(gameLoop);
+    }
+
+    selectTower('fire');
+    updateUI();
+    gameLoop();
+    window.addEventListener('resize', () => {
+      canvas.width = window.innerWidth - 280;
+    });
+  </script>
+</body>
+</html>
