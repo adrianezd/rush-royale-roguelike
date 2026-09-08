@@ -2,325 +2,735 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Rush Royale Tower Defense</title>
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: 'Arial', sans-serif; background: #1a1a2e; color: #eee; overflow: hidden; }
+    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body { height: 100%; overscroll-behavior: none; }
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: #12121f;
+      color: #eee;
+      display: flex;
+      flex-direction: column;
+      height: 100dvh;
+      overflow: hidden;
+      user-select: none;
+    }
 
-    #game-container { display: flex; height: 100vh; }
-    #game-canvas { flex: 1; background: linear-gradient(135deg, #0f3460, #16213e); border-right: 2px solid #e94560; }
-    #sidebar { width: 280px; background: #0f3460; border-left: 2px solid #e94560; display: flex; flex-direction: column; padding: 15px; overflow-y: auto; }
+    /* ---------- HUD ---------- */
+    #hud {
+      flex: 0 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+      padding: max(8px, env(safe-area-inset-top)) 10px 8px;
+      background: #0f3460;
+      border-bottom: 2px solid #e94560;
+      z-index: 2;
+    }
+    .hud-item {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-weight: 700;
+      font-size: 0.8rem;
+      background: rgba(0,0,0,0.25);
+      padding: 5px 9px;
+      border-radius: 20px;
+      white-space: nowrap;
+    }
+    .hud-icon { font-size: 0.95rem; line-height: 1; }
+    #hudMana { color: #4ecdc4; }
+    #hudLives { color: #ff6b7a; }
+    #hudLevel { color: #ffd166; }
 
-    .header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #e94560; padding-bottom: 15px; }
-    .header h1 { font-size: 24px; color: #e94560; }
-    .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; font-size: 14px; }
-    .stat { background: rgba(233, 69, 96, 0.1); padding: 8px; border-radius: 4px; border-left: 3px solid #e94560; }
+    /* ---------- Board ---------- */
+    #board-wrap {
+      flex: 1 1 auto;
+      min-height: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #0a0e1a;
+      position: relative;
+    }
+    canvas { display: block; touch-action: none; }
 
-    .tower-selector { margin-bottom: 20px; }
-    .tower-selector h3 { margin-bottom: 10px; color: #e94560; font-size: 16px; }
-    .tower-btn { width: 100%; padding: 12px; margin-bottom: 8px; background: #16213e; border: 2px solid #e94560; color: #eee; border-radius: 4px; cursor: pointer; font-size: 14px; transition: all 0.2s; }
-    .tower-btn:hover { background: #e94560; color: #1a1a2e; }
-    .tower-btn.selected { background: #e94560; color: #1a1a2e; }
-    .tower-icon { display: inline-block; width: 20px; height: 20px; margin-right: 8px; border-radius: 50%; vertical-align: middle; }
+    #toast {
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(15, 52, 96, 0.95);
+      border: 1.5px solid #e94560;
+      color: #fff;
+      font-size: 0.8rem;
+      font-weight: 600;
+      padding: 7px 14px;
+      border-radius: 20px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s, transform 0.25s;
+      white-space: nowrap;
+      max-width: 90%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    #toast.show { opacity: 1; transform: translateX(-50%) translateY(4px); }
 
-    .tower-icon.fire { background: #e94560; }
-    .tower-icon.frost { background: #4ecdc4; }
-    .tower-icon.nature { background: #44b78b; }
+    /* ---------- Controls (bottom on mobile, side on wide screens) ---------- */
+    #controls {
+      flex: 0 0 auto;
+      background: #0f3460;
+      border-top: 2px solid #e94560;
+      padding: 8px 10px max(8px, env(safe-area-inset-bottom));
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      z-index: 2;
+    }
 
-    .level-info { background: rgba(233, 69, 96, 0.1); padding: 12px; border-radius: 4px; margin-bottom: 20px; }
-    .level-info h3 { color: #e94560; margin-bottom: 8px; }
-    .level-info p { font-size: 13px; line-height: 1.6; }
+    .mana-bar {
+      width: 100%;
+      height: 10px;
+      background: #0a0e27;
+      border: 1.5px solid #4ecdc4;
+      border-radius: 8px;
+      overflow: hidden;
+      flex: 0 0 auto;
+    }
+    .mana-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #4ecdc4, #44b78b);
+      width: 0%;
+      transition: width 0.25s;
+    }
 
-    .mana-bar { width: 100%; height: 24px; background: #0a0e27; border: 2px solid #4ecdc4; border-radius: 12px; margin-top: 8px; overflow: hidden; }
-    .mana-fill { height: 100%; background: linear-gradient(90deg, #4ecdc4, #44b78b); width: 0%; transition: width 0.3s; }
+    #towerRow {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+    .tower-chip {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      padding: 8px 4px;
+      background: #16213e;
+      border: 2px solid rgba(233, 69, 96, 0.5);
+      color: #eee;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 0.72rem;
+      font-weight: 600;
+      transition: all 0.15s;
+    }
+    .tower-chip:active { transform: scale(0.95); }
+    .tower-chip.selected { background: #e94560; border-color: #ff8fa3; color: #1a1a2e; }
+    .tower-dot { width: 20px; height: 20px; border-radius: 50%; box-shadow: inset 0 -3px 5px rgba(0,0,0,0.3), 0 0 6px currentColor; }
+    .tower-cost { font-size: 0.66rem; opacity: 0.85; }
 
-    .tower-info { background: rgba(78, 205, 196, 0.1); padding: 12px; border-radius: 4px; margin-top: 15px; border-left: 3px solid #4ecdc4; }
-    .tower-info h4 { color: #4ecdc4; font-size: 13px; margin-bottom: 6px; }
-    .tower-info p { font-size: 12px; }
+    #actionRow {
+      display: flex;
+      gap: 8px;
+    }
+    #panelInfo {
+      flex: 1;
+      background: rgba(78, 205, 196, 0.12);
+      border-left: 3px solid #4ecdc4;
+      border-radius: 6px;
+      padding: 6px 9px;
+      font-size: 0.72rem;
+      line-height: 1.35;
+      min-width: 0;
+    }
+    #panelInfo b { color: #4ecdc4; }
+    #panelInfo .warn { color: #ffb454; }
 
-    .controls { margin-top: auto; }
-    .btn-start { width: 100%; padding: 12px; background: #e94560; color: #1a1a2e; border: none; border-radius: 4px; font-size: 16px; font-weight: bold; cursor: pointer; transition: all 0.2s; }
-    .btn-start:hover { background: #ff6b7a; }
-    .btn-start:disabled { background: #666; cursor: not-allowed; }
+    .btn-start {
+      flex: 0 0 auto;
+      padding: 10px 18px;
+      background: #e94560;
+      color: #1a1a2e;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .btn-start:active { transform: scale(0.96); }
+    .btn-start:disabled { background: #555; color: #999; cursor: not-allowed; }
 
-    canvas { display: block; }
+    /* ---------- Wide screens: side-by-side layout ---------- */
+    @media (min-width: 780px) and (min-height: 500px) {
+      body { flex-direction: row; }
+      #hud {
+        flex-direction: column;
+        align-items: stretch;
+        width: 220px;
+        order: 1;
+        border-bottom: none;
+        border-right: 2px solid #e94560;
+        padding: 16px 12px;
+        gap: 10px;
+      }
+      .hud-item { justify-content: center; font-size: 0.9rem; }
+      #board-wrap { order: 2; }
+      #controls {
+        order: 3;
+        width: 260px;
+        border-top: none;
+        border-left: 2px solid #e94560;
+        justify-content: flex-start;
+      }
+      #towerRow { grid-template-columns: 1fr; }
+      .tower-chip { flex-direction: row; justify-content: flex-start; padding: 10px; }
+      #actionRow { flex-direction: column; }
+    }
   </style>
 </head>
 <body>
-  <div id="game-container">
-    <canvas id="gameCanvas" style="display: block;"></canvas>
-    <div id="sidebar">
-      <div class="header">
-        <h1>Rush Royale TD</h1>
-        <div class="stats">
-          <div class="stat">Nivel: <strong id="levelNum">1</strong></div>
-          <div class="stat">Olas: <strong id="waveNum">1</strong>/<strong id="waveMax">3</strong></div>
-          <div class="stat">Vidas: <strong id="lives">20</strong></div>
-          <div class="stat">Mana: <strong id="manaText">0</strong></div>
-        </div>
-      </div>
+  <div id="hud">
+    <div class="hud-item" id="hudMana"><span class="hud-icon">💧</span><span id="manaText">0</span></div>
+    <div class="hud-item" id="hudLevel">Nv <span id="levelNum">1</span> · Ola <span id="waveNum">1</span>/<span id="waveMax">3</span></div>
+    <div class="hud-item" id="hudLives"><span class="hud-icon">❤</span><span id="lives">20</span></div>
+  </div>
 
-      <div class="level-info">
-        <h3>Nivel Actual</h3>
-        <p id="levelDesc">Derrota a los primeros enemigos y construye tu ejército.</p>
-        <div class="mana-bar"><div class="mana-fill" id="manaBar"></div></div>
-      </div>
+  <div id="board-wrap">
+    <canvas id="gameCanvas"></canvas>
+    <div id="toast"></div>
+  </div>
 
-      <div class="tower-selector">
-        <h3>Torres</h3>
-        <button class="tower-btn" onclick="selectTower('fire', this)">
-          <span class="tower-icon fire"></span> Fuego (Ataque)
-        </button>
-        <button class="tower-btn" onclick="selectTower('frost', this)">
-          <span class="tower-icon frost"></span> Hielo (Lentitud)
-        </button>
-        <button class="tower-btn" onclick="selectTower('nature', this)">
-          <span class="tower-icon nature"></span> Naturaleza (Rango)
-        </button>
-      </div>
-
-      <div class="tower-info" id="towerInfo" style="display:none;">
-        <h4 id="towerName"></h4>
-        <p id="towerDesc"></p>
-      </div>
-
-      <div class="controls">
-        <button class="btn-start" id="startBtn" onclick="startWave()">Iniciar Ola</button>
-      </div>
+  <div id="controls">
+    <div class="mana-bar"><div class="mana-fill" id="manaBar"></div></div>
+    <div id="towerRow">
+      <button class="tower-chip" data-tower="fire" onclick="selectTower('fire', this)">
+        <span class="tower-dot" style="background:#e94560;color:#e94560;"></span>
+        <span>Fuego</span>
+        <span class="tower-cost" id="costFire"></span>
+      </button>
+      <button class="tower-chip" data-tower="frost" onclick="selectTower('frost', this)">
+        <span class="tower-dot" style="background:#4ecdc4;color:#4ecdc4;"></span>
+        <span>Hielo</span>
+        <span class="tower-cost" id="costFrost"></span>
+      </button>
+      <button class="tower-chip" data-tower="nature" onclick="selectTower('nature', this)">
+        <span class="tower-dot" style="background:#44b78b;color:#44b78b;"></span>
+        <span>Bosque</span>
+        <span class="tower-cost" id="costNature"></span>
+      </button>
+    </div>
+    <div id="actionRow">
+      <div id="panelInfo">Toca una casilla libre para construir. Toca una torre puesta para mejorarla.</div>
+      <button class="btn-start" id="startBtn" onclick="startWave()">Iniciar Ola</button>
     </div>
   </div>
 
   <script>
-    const canvas = document.getElementById('gameCanvas');
-    const ctx = canvas.getContext('2d');
-    canvas.width = window.innerWidth - 280;
-    canvas.height = window.innerHeight;
+  (function () {
+    'use strict';
 
-    // Game state
-    const game = {
+    /* =========================================================
+       1. CONFIG
+       ========================================================= */
+    var TOWER_TYPES = {
+      fire:   { name: 'Fuego',   color: '#e94560', damage: 22, rangeTiles: 2.3, speed: 1.0, manaCost: 30, desc: 'Daño directo alto.' },
+      frost:  { name: 'Hielo',   color: '#4ecdc4', damage: 10, rangeTiles: 2.0, speed: 0.9, manaCost: 25, desc: 'Ralentiza al enemigo.' },
+      nature: { name: 'Bosque',  color: '#44b78b', damage: 14, rangeTiles: 3.0, speed: 1.15, manaCost: 35, desc: 'Alcance largo.' }
+    };
+
+    var LEVEL_CONFIGS = [
+      { enemies: 8,  health: 22, speed: 1.0, reward: 9,  spawnMs: 900 },
+      { enemies: 11, health: 32, speed: 1.15, reward: 10, spawnMs: 820 },
+      { enemies: 14, health: 44, speed: 1.3, reward: 11, spawnMs: 760 },
+      { enemies: 18, health: 58, speed: 1.45, reward: 12, spawnMs: 700 },
+      { enemies: 22, health: 75, speed: 1.6, reward: 13, spawnMs: 650 }
+    ];
+
+    var PASSIVE_MANA_PER_SEC = 4;
+    var START_MANA = 55;
+    var MAX_MANA = 150;
+    var TILE_TARGET_PX = 50;
+
+    /* =========================================================
+       2. STATE
+       ========================================================= */
+    var canvas = document.getElementById('gameCanvas');
+    var ctx = canvas.getContext('2d');
+    var boardWrap = document.getElementById('board-wrap');
+
+    var game = {
       level: 1,
       wave: 1,
       maxWaves: 3,
       lives: 20,
-      mana: 0,
-      maxMana: 100,
+      mana: START_MANA,
       selectedTower: 'fire',
+      selectedPlacedTower: null,
       towers: [],
       enemies: [],
       isWaveActive: false,
-      levelDescriptions: [
-        'Derrota a los primeros enemigos y construye tu ejército.',
-        'Las olas se hacen más fuertes. Coloca torres estratégicamente.',
-        'Nivel intermedio. Necesitarás evolucionar tus torres.',
-        'Las cosas se ponen difíciles. Usa las evoluciones sabiamente.',
-        'Épico final. Demuestra tu dominio del juego.'
-      ]
+      enemiesToSpawn: 0,
+      spawnTimer: null
     };
 
-    const TOWER_TYPES = {
-      fire: { color: '#e94560', name: 'Fuego', desc: 'Ataque directo. Daño: 20', damage: 20, range: 120, speed: 1.0, manaCost: 30, evolved: false },
-      frost: { color: '#4ecdc4', name: 'Hielo', desc: 'Ralentiza enemigos. Daño: 10', damage: 10, range: 100, speed: 0.8, manaCost: 25, evolved: false },
-      nature: { color: '#44b78b', name: 'Naturaleza', desc: 'Rango extendido. Daño: 15', damage: 15, range: 140, speed: 1.2, manaCost: 35, evolved: false }
-    };
+    var grid = null; // { cols, rows, vertical, tileSize, offsetX, offsetY, pathSet, decor, waypoints }
 
-    const LEVEL_CONFIGS = [
-      { enemies: 8, health: 20, speed: 1, reward: 15 },
-      { enemies: 12, health: 30, speed: 1.2, reward: 20 },
-      { enemies: 15, health: 40, speed: 1.4, reward: 25 },
-      { enemies: 20, health: 50, speed: 1.6, reward: 30 },
-      { enemies: 25, health: 60, speed: 1.8, reward: 35 }
-    ];
+    /* =========================================================
+       3. GRID + PATH GENERATION
+       ========================================================= */
+    function rand(a, b) { return a + Math.random() * (b - a); }
+    function randInt(a, b) { return Math.floor(rand(a, b + 1)); }
+    function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+    function key(c, r) { return c + ',' + r; }
 
-    class Enemy {
-      constructor(x, y, level) {
-        this.x = x;
-        this.y = y;
-        this.radius = 8;
-        this.health = LEVEL_CONFIGS[level - 1].health;
-        this.maxHealth = this.health;
-        this.speed = LEVEL_CONFIGS[level - 1].speed;
-        this.vx = 2 * this.speed;
-        this.slowFactor = 1;
-      }
-
-      update() {
-        this.x += this.vx * this.slowFactor;
-        this.slowFactor = Math.min(1, this.slowFactor + 0.02);
-      }
-
-      draw() {
-        ctx.fillStyle = `hsl(0, 100%, ${50 + (this.health / this.maxHealth) * 30}%)`;
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Health bar
-        ctx.fillStyle = '#333';
-        ctx.fillRect(this.x - 12, this.y - 18, 24, 3);
-        ctx.fillStyle = '#4ecdc4';
-        ctx.fillRect(this.x - 12, this.y - 18, 24 * (this.health / this.maxHealth), 3);
-      }
-
-      takeDamage(damage) {
-        this.health -= damage;
-        return this.health <= 0;
-      }
-
-      isOffscreen() {
-        return this.x > canvas.width;
-      }
-
-      applySlowdown(factor) {
-        this.slowFactor = Math.max(0.3, this.slowFactor * factor);
-      }
+    function chooseGridDims(w, h) {
+      var cols = clamp(Math.round(w / TILE_TARGET_PX), 5, 14);
+      var rows = clamp(Math.round(h / TILE_TARGET_PX), 6, 16);
+      return { cols: cols, rows: rows, vertical: rows >= cols };
     }
 
-    class Tower {
-      constructor(x, y, type) {
-        this.x = x;
-        this.y = y;
-        this.type = type;
-        this.radius = 15;
-        this.level = 1;
-        this.shootTimer = 0;
-        Object.assign(this, TOWER_TYPES[type]);
-      }
-
-      update() {
-        this.shootTimer++;
-        if (this.shootTimer > 60 / this.speed) {
-          const target = this.findTarget();
-          if (target) {
-            this.shoot(target);
-            this.shootTimer = 0;
+    function generatePathCells(cols, rows, vertical) {
+      var priLen = vertical ? rows : cols;
+      var secLen = vertical ? cols : rows;
+      var sec = randInt(1, secLen - 2);
+      var pri = 0;
+      function mk(p, s) { return vertical ? { col: s, row: p } : { col: p, row: s }; }
+      var cells = [mk(pri, sec)];
+      while (pri < priLen - 1) {
+        if (Math.random() < 0.65) {
+          var dir = Math.random() < 0.5 ? -1 : 1;
+          var runLen = 1 + Math.floor(Math.random() * 2);
+          for (var i = 0; i < runLen; i++) {
+            var next = sec + dir;
+            if (next < 0 || next >= secLen) break;
+            sec = next;
+            cells.push(mk(pri, sec));
           }
         }
+        pri++;
+        cells.push(mk(pri, sec));
       }
-
-      findTarget() {
-        for (let enemy of game.enemies) {
-          const dist = Math.hypot(enemy.x - this.x, enemy.y - this.y);
-          if (dist < this.range) return enemy;
-        }
-        return null;
-      }
-
-      shoot(target) {
-        const dist = Math.hypot(target.x - this.x, target.y - this.y);
-        if (target.takeDamage(this.damage)) {
-          game.enemies = game.enemies.filter(e => e !== target);
-          game.mana = Math.min(game.maxMana, game.mana + LEVEL_CONFIGS[game.level - 1].reward);
-          updateUI();
-        }
-
-        if (this.type === 'frost') {
-          target.applySlowdown(0.6);
-        }
-      }
-
-      draw() {
-        ctx.fillStyle = this.color;
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-        ctx.fill();
-
-        if (this.level > 1) {
-          ctx.fillStyle = '#FFD700';
-          ctx.font = 'bold 12px Arial';
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-          ctx.fillText('Lv' + this.level, this.x, this.y);
-        }
-
-        // Range preview on hover
-        const mouseX = canvas.mouseX || -1000;
-        const mouseY = canvas.mouseY || -1000;
-        const distToMouse = Math.hypot(mouseX - this.x, mouseY - this.y);
-        if (distToMouse < 50) {
-          ctx.strokeStyle = 'rgba(233, 69, 96, 0.3)';
-          ctx.lineWidth = 1;
-          ctx.beginPath();
-          ctx.arc(this.x, this.y, this.range, 0, Math.PI * 2);
-          ctx.stroke();
-        }
-      }
-
-      evolve() {
-        if (this.level < 3) {
-          this.level++;
-          this.damage *= 1.3;
-          this.range *= 1.1;
-          this.speed *= 1.15;
-        }
-      }
+      return cells;
     }
 
-    function selectTower(type, btnEl) {
-      game.selectedTower = type;
-      document.querySelectorAll('.tower-btn').forEach(btn => btn.classList.remove('selected'));
-      if (btnEl) btnEl.classList.add('selected');
-
-      const tower = TOWER_TYPES[type];
-      document.getElementById('towerName').textContent = tower.name;
-      document.getElementById('towerDesc').textContent = tower.desc + ` | Costo: ${tower.manaCost} maná`;
-      document.getElementById('towerInfo').style.display = 'block';
+    function seededRand(seed) {
+      var x = Math.sin(seed) * 10000;
+      return x - Math.floor(x);
     }
 
-    canvas.addEventListener('click', (e) => {
-      if (!game.isWaveActive) return;
-      const rect = canvas.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
+    function buildGrid() {
+      var w = boardWrap.clientWidth;
+      var h = boardWrap.clientHeight;
+      var dims = chooseGridDims(w, h);
+      var pathCells = generatePathCells(dims.cols, dims.rows, dims.vertical);
+      var pathSet = {};
+      pathCells.forEach(function (c) { pathSet[key(c.col, c.row)] = true; });
 
-      const towerConfig = TOWER_TYPES[game.selectedTower];
-      if (game.mana >= towerConfig.manaCost) {
-        game.mana -= towerConfig.manaCost;
-        game.towers.push(new Tower(x, y, game.selectedTower));
+      var decor = [];
+      for (var r = 0; r < dims.rows; r++) {
+        for (var c = 0; c < dims.cols; c++) {
+          var isPath = !!pathSet[key(c, r)];
+          var seed = c * 137.13 + r * 91.7;
+          var dots = [];
+          var n = isPath ? 2 : 3;
+          for (var i = 0; i < n; i++) {
+            dots.push({
+              dx: seededRand(seed + i * 3.1) - 0.5,
+              dy: seededRand(seed + i * 5.7) - 0.5,
+              r: 0.05 + seededRand(seed + i * 7.3) * 0.06
+            });
+          }
+          decor.push({ col: c, row: r, isPath: isPath, variant: Math.round(seededRand(seed)) , dots: dots });
+        }
+      }
+
+      grid = {
+        cols: dims.cols, rows: dims.rows, vertical: dims.vertical,
+        pathCells: pathCells, pathSet: pathSet, decor: decor,
+        tileSize: 0, offsetX: 0, offsetY: 0, waypoints: []
+      };
+      layoutGrid();
+    }
+
+    function layoutGrid() {
+      if (!grid) return;
+      var w = boardWrap.clientWidth;
+      var h = boardWrap.clientHeight;
+      var dpr = window.devicePixelRatio || 1;
+
+      var tileSize = Math.floor(Math.min(w / grid.cols, h / grid.rows));
+      tileSize = Math.max(18, tileSize);
+      var gridW = tileSize * grid.cols;
+      var gridH = tileSize * grid.rows;
+
+      grid.tileSize = tileSize;
+      grid.offsetX = Math.floor((w - gridW) / 2);
+      grid.offsetY = Math.floor((h - gridH) / 2);
+
+      canvas.style.width = w + 'px';
+      canvas.style.height = h + 'px';
+      canvas.width = Math.round(w * dpr);
+      canvas.height = Math.round(h * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+      grid.waypoints = grid.pathCells.map(function (c) { return tileCenter(c.col, c.row); });
+    }
+
+    function tileCenter(col, row) {
+      return {
+        x: grid.offsetX + col * grid.tileSize + grid.tileSize / 2,
+        y: grid.offsetY + row * grid.tileSize + grid.tileSize / 2
+      };
+    }
+
+    function pxToTile(x, y) {
+      var col = Math.floor((x - grid.offsetX) / grid.tileSize);
+      var row = Math.floor((y - grid.offsetY) / grid.tileSize);
+      return { col: col, row: row };
+    }
+
+    function isBuildable(col, row) {
+      if (col < 0 || row < 0 || col >= grid.cols || row >= grid.rows) return false;
+      if (grid.pathSet[key(col, row)]) return false;
+      return true;
+    }
+
+    function towerAt(col, row) {
+      for (var i = 0; i < game.towers.length; i++) {
+        if (game.towers[i].col === col && game.towers[i].row === row) return game.towers[i];
+      }
+      return null;
+    }
+
+    /* =========================================================
+       4. ENTITIES
+       ========================================================= */
+    function Enemy(level) {
+      var cfg = LEVEL_CONFIGS[level - 1];
+      this.segIndex = 0;
+      this.segT = 0;
+      this.health = cfg.health;
+      this.maxHealth = cfg.health;
+      this.speed = cfg.speed; // tiles per second
+      this.slowFactor = 1;
+      this.radius = 0; // set on draw based on tileSize
+      var p = tileCenter(grid.pathCells[0].col, grid.pathCells[0].row);
+      this.x = p.x; this.y = p.y;
+    }
+    Enemy.prototype.update = function (dt) {
+      var wps = grid.waypoints;
+      if (this.segIndex >= wps.length - 1) return;
+      var stepTiles = this.speed * this.slowFactor * dt; // tiles this frame
+      this.segT += stepTiles;
+      while (this.segT >= 1 && this.segIndex < wps.length - 1) {
+        this.segT -= 1;
+        this.segIndex++;
+        if (this.segIndex >= wps.length - 1) { this.segT = 0; break; }
+      }
+      var a = wps[this.segIndex];
+      var b = wps[Math.min(this.segIndex + 1, wps.length - 1)];
+      this.x = a.x + (b.x - a.x) * this.segT;
+      this.y = a.y + (b.y - a.y) * this.segT;
+      this.slowFactor = Math.min(1, this.slowFactor + dt * 0.6);
+    };
+    Enemy.prototype.reachedEnd = function () {
+      return this.segIndex >= grid.waypoints.length - 1;
+    };
+    Enemy.prototype.takeDamage = function (dmg) {
+      this.health -= dmg;
+      return this.health <= 0;
+    };
+    Enemy.prototype.applySlow = function (factor) {
+      this.slowFactor = Math.max(0.35, this.slowFactor * factor);
+    };
+    Enemy.prototype.draw = function () {
+      var r = grid.tileSize * 0.28;
+      var grad = ctx.createRadialGradient(this.x - r * 0.3, this.y - r * 0.3, r * 0.1, this.x, this.y, r);
+      var hp = this.health / this.maxHealth;
+      grad.addColorStop(0, 'hsl(' + (200 - hp * 20) + ',80%,70%)');
+      grad.addColorStop(1, 'hsl(' + (210) + ',70%,' + (30 + hp * 15) + '%)');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = 'rgba(0,0,0,0.35)';
+      ctx.stroke();
+
+      var barW = r * 2;
+      ctx.fillStyle = 'rgba(0,0,0,0.5)';
+      ctx.fillRect(this.x - barW / 2, this.y - r - 8, barW, 4);
+      ctx.fillStyle = hp > 0.4 ? '#4ecdc4' : '#e94560';
+      ctx.fillRect(this.x - barW / 2, this.y - r - 8, barW * hp, 4);
+    };
+
+    function Tower(col, row, type) {
+      this.col = col; this.row = row; this.type = type;
+      this.level = 1; this.shootTimer = 0;
+      var p = tileCenter(col, row);
+      this.x = p.x; this.y = p.y;
+      var t = TOWER_TYPES[type];
+      this.color = t.color;
+      this.damage = t.damage;
+      this.rangeTiles = t.rangeTiles;
+      this.speed = t.speed;
+    }
+    Tower.prototype.rangePx = function () { return this.rangeTiles * grid.tileSize; };
+    Tower.prototype.update = function (dt) {
+      this.shootTimer += dt;
+      var interval = 1 / this.speed;
+      if (this.shootTimer >= interval) {
+        var target = this.findTarget();
+        if (target) { this.shoot(target); this.shootTimer = 0; }
+      }
+    };
+    Tower.prototype.findTarget = function () {
+      var range = this.rangePx();
+      var best = null, bestProgress = -1;
+      for (var i = 0; i < game.enemies.length; i++) {
+        var e = game.enemies[i];
+        var d = Math.hypot(e.x - this.x, e.y - this.y);
+        if (d <= range && e.segIndex > bestProgress) { best = e; bestProgress = e.segIndex; }
+      }
+      return best;
+    };
+    Tower.prototype.shoot = function (target) {
+      game.shots.push({ x1: this.x, y1: this.y, x2: target.x, y2: target.y, color: this.color, life: 0.12 });
+      if (target.takeDamage(this.damage)) {
+        game.enemies = game.enemies.filter(function (e) { return e !== target; });
+        game.mana = Math.min(MAX_MANA, game.mana + LEVEL_CONFIGS[game.level - 1].reward);
         updateUI();
       }
-    });
+      if (this.type === 'frost') target.applySlow(0.55);
+    };
+    Tower.prototype.draw = function (isSelected) {
+      var ts = grid.tileSize;
+      var p = tileCenter(this.col, this.row);
+      this.x = p.x; this.y = p.y;
 
-    canvas.addEventListener('mousemove', (e) => {
-      const rect = canvas.getBoundingClientRect();
-      canvas.mouseX = e.clientX - rect.left;
-      canvas.mouseY = e.clientY - rect.top;
-    });
-
-    canvas.addEventListener('contextmenu', (e) => {
-      e.preventDefault();
-      const rect = canvas.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
-
-      for (let i = 0; i < game.towers.length; i++) {
-        if (Math.hypot(game.towers[i].x - x, game.towers[i].y - y) < 20) {
-          const cost = Math.round(TOWER_TYPES[game.towers[i].type].manaCost * 0.5);
-          if (game.mana >= cost) {
-            game.mana -= cost;
-            game.towers[i].evolve();
-            updateUI();
-          }
-          break;
-        }
+      if (isSelected) {
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.rangePx(), 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255,255,255,0.06)';
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
       }
-    });
 
-    function startWave() {
+      ctx.fillStyle = 'rgba(0,0,0,0.25)';
+      ctx.beginPath();
+      ctx.ellipse(this.x, this.y + ts * 0.22, ts * 0.28, ts * 0.1, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      var r = ts * 0.32;
+      var grad = ctx.createRadialGradient(this.x - r * 0.3, this.y - r * 0.4, r * 0.1, this.x, this.y, r);
+      grad.addColorStop(0, shade(this.color, 40));
+      grad.addColorStop(1, this.color);
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+      ctx.stroke();
+
+      if (this.level > 1) {
+        ctx.fillStyle = '#FFD700';
+        ctx.font = 'bold ' + Math.round(ts * 0.24) + 'px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(String(this.level), this.x, this.y);
+      }
+    };
+    Tower.prototype.upgradeCost = function () {
+      return Math.round(TOWER_TYPES[this.type].manaCost * 0.6 * this.level);
+    };
+    Tower.prototype.evolve = function () {
+      if (this.level >= 3) return false;
+      this.level++;
+      this.damage *= 1.35;
+      this.rangeTiles *= 1.08;
+      this.speed *= 1.15;
+      return true;
+    };
+
+    function shade(hex, amt) {
+      var n = parseInt(hex.slice(1), 16);
+      var r = clamp(((n >> 16) & 255) + amt, 0, 255);
+      var g = clamp(((n >> 8) & 255) + amt, 0, 255);
+      var b = clamp((n & 255) + amt, 0, 255);
+      return 'rgb(' + r + ',' + g + ',' + b + ')';
+    }
+
+    /* =========================================================
+       5. RENDER
+       ========================================================= */
+    var GRASS = ['#1f6b46', '#256f4a'];
+    var PATH = ['#8f8371', '#968a77'];
+    var PATH_EDGE = '#e94560';
+
+    function drawGrid() {
+      ctx.fillStyle = '#0a0e1a';
+      ctx.fillRect(0, 0, boardWrap.clientWidth, boardWrap.clientHeight);
+
+      var ts = grid.tileSize;
+      grid.decor.forEach(function (d) {
+        var x = grid.offsetX + d.col * ts;
+        var y = grid.offsetY + d.row * ts;
+        var palette = d.isPath ? PATH : GRASS;
+        ctx.fillStyle = palette[d.variant];
+        ctx.fillRect(x, y, ts, ts);
+
+        ctx.fillStyle = d.isPath ? 'rgba(60,45,30,0.25)' : 'rgba(0,40,20,0.25)';
+        d.dots.forEach(function (dot) {
+          ctx.beginPath();
+          ctx.arc(x + ts / 2 + dot.dx * ts, y + ts / 2 + dot.dy * ts, dot.r * ts, 0, Math.PI * 2);
+          ctx.fill();
+        });
+      });
+
+      // path edge trim (walls) where a path tile touches a non-path/out-of-bounds neighbor
+      ctx.strokeStyle = PATH_EDGE;
+      ctx.lineWidth = Math.max(2, ts * 0.07);
+      ctx.lineCap = 'round';
+      var neighbors = [[0, -1, 'top'], [0, 1, 'bottom'], [-1, 0, 'left'], [1, 0, 'right']];
+      grid.decor.forEach(function (d) {
+        if (!d.isPath) return;
+        var x = grid.offsetX + d.col * ts;
+        var y = grid.offsetY + d.row * ts;
+        neighbors.forEach(function (nb) {
+          var nc = d.col + nb[0], nr = d.row + nb[1];
+          var open = nc < 0 || nr < 0 || nc >= grid.cols || nr >= grid.rows || !grid.pathSet[key(nc, nr)];
+          if (!open) return;
+          ctx.beginPath();
+          if (nb[2] === 'top') { ctx.moveTo(x, y); ctx.lineTo(x + ts, y); }
+          else if (nb[2] === 'bottom') { ctx.moveTo(x, y + ts); ctx.lineTo(x + ts, y + ts); }
+          else if (nb[2] === 'left') { ctx.moveTo(x, y); ctx.lineTo(x, y + ts); }
+          else { ctx.moveTo(x + ts, y); ctx.lineTo(x + ts, y + ts); }
+          ctx.stroke();
+        });
+      });
+    }
+
+    function drawShots(dt) {
+      game.shots = game.shots.filter(function (s) {
+        s.life -= dt;
+        if (s.life <= 0) return false;
+        ctx.strokeStyle = s.color;
+        ctx.globalAlpha = clamp(s.life / 0.12, 0, 1);
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(s.x1, s.y1);
+        ctx.lineTo(s.x2, s.y2);
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+        return true;
+      });
+    }
+
+    /* =========================================================
+       6. GAME FLOW
+       ========================================================= */
+    function showToast(msg) {
+      var t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.add('show');
+      clearTimeout(showToast._h);
+      showToast._h = setTimeout(function () { t.classList.remove('show'); }, 1400);
+    }
+
+    window.selectTower = function selectTower(type, btnEl) {
+      game.selectedTower = type;
+      game.selectedPlacedTower = null;
+      document.querySelectorAll('.tower-chip').forEach(function (b) { b.classList.remove('selected'); });
+      if (btnEl) btnEl.classList.add('selected');
+      var t = TOWER_TYPES[type];
+      document.getElementById('panelInfo').innerHTML =
+        '<b>' + t.name + '</b> · Coste ' + t.manaCost + ' 💧<br>' + t.desc;
+    }
+
+    function handleTap(clientX, clientY) {
+      var rect = canvas.getBoundingClientRect();
+      var x = clientX - rect.left;
+      var y = clientY - rect.top;
+      var tile = pxToTile(x, y);
+      if (tile.col < 0 || tile.row < 0 || tile.col >= grid.cols || tile.row >= grid.rows) return;
+
+      var existing = towerAt(tile.col, tile.row);
+      if (existing) {
+        game.selectedPlacedTower = existing;
+        showUpgradePanel(existing);
+        return;
+      }
+
+      if (!isBuildable(tile.col, tile.row)) {
+        showToast('No se puede construir sobre el camino');
+        return;
+      }
+
+      var type = game.selectedTower;
+      var cfg = TOWER_TYPES[type];
+      if (game.mana < cfg.manaCost) {
+        showToast('Maná insuficiente (' + cfg.manaCost + ' 💧)');
+        return;
+      }
+
+      game.mana -= cfg.manaCost;
+      game.towers.push(new Tower(tile.col, tile.row, type));
+      game.selectedPlacedTower = null;
+      updateUI();
+    }
+
+    function showUpgradePanel(tower) {
+      var cost = tower.upgradeCost();
+      var maxed = tower.level >= 3;
+      var panel = document.getElementById('panelInfo');
+      panel.innerHTML =
+        '<b>' + TOWER_TYPES[tower.type].name + ' Nv' + tower.level + '</b><br>' +
+        (maxed
+          ? '<span class="warn">Nivel máximo</span>'
+          : 'Mejorar: ' + cost + ' 💧 ' +
+            '<button onclick="upgradeSelectedTower()" style="margin-left:6px;padding:2px 8px;border-radius:6px;border:none;background:#4ecdc4;color:#0a0e1a;font-weight:700;cursor:pointer;">Mejorar</button>');
+    }
+
+    window.upgradeSelectedTower = function () {
+      var tower = game.selectedPlacedTower;
+      if (!tower) return;
+      var cost = tower.upgradeCost();
+      if (tower.level >= 3) return;
+      if (game.mana < cost) { showToast('Maná insuficiente (' + cost + ' 💧)'); return; }
+      game.mana -= cost;
+      tower.evolve();
+      updateUI();
+      showUpgradePanel(tower);
+    };
+
+    canvas.addEventListener('click', function (e) { handleTap(e.clientX, e.clientY); });
+    canvas.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+
+    window.startWave = function startWave() {
       if (game.isWaveActive || game.wave > game.maxWaves) return;
       game.isWaveActive = true;
+      game.selectedPlacedTower = null;
       document.getElementById('startBtn').disabled = true;
 
-      const config = LEVEL_CONFIGS[game.level - 1];
-      let enemyCount = 0;
-      const spawnInterval = setInterval(() => {
-        if (enemyCount < config.enemies) {
-          game.enemies.push(new Enemy(0, Math.random() * (canvas.height - 60) + 30, game.level));
-          enemyCount++;
+      var cfg = LEVEL_CONFIGS[game.level - 1];
+      game.enemiesToSpawn = cfg.enemies;
+      clearInterval(game.spawnTimer);
+      game.spawnTimer = setInterval(function () {
+        if (game.enemiesToSpawn > 0) {
+          game.enemies.push(new Enemy(game.level));
+          game.enemiesToSpawn--;
         } else {
-          clearInterval(spawnInterval);
+          clearInterval(game.spawnTimer);
         }
-      }, 300);
+      }, cfg.spawnMs);
     }
 
     function updateUI() {
@@ -328,90 +738,95 @@
       document.getElementById('waveNum').textContent = game.wave;
       document.getElementById('waveMax').textContent = game.maxWaves;
       document.getElementById('lives').textContent = game.lives;
-      document.getElementById('manaText').textContent = game.mana;
-      document.getElementById('manaBar').style.width = (game.mana / game.maxMana) * 100 + '%';
+      document.getElementById('manaText').textContent = Math.floor(game.mana);
+      document.getElementById('manaBar').style.width = clamp((game.mana / MAX_MANA) * 100, 0, 100) + '%';
+      document.getElementById('costFire').textContent = TOWER_TYPES.fire.manaCost + ' 💧';
+      document.getElementById('costFrost').textContent = TOWER_TYPES.frost.manaCost + ' 💧';
+      document.getElementById('costNature').textContent = TOWER_TYPES.nature.manaCost + ' 💧';
     }
 
-    function update() {
-      game.towers.forEach(tower => tower.update());
-      game.enemies.forEach(enemy => {
-        enemy.update();
-        if (enemy.isOffscreen()) {
+    /* =========================================================
+       7. LOOP
+       ========================================================= */
+    var lastTs = 0;
+    game.shots = [];
+
+    function tick(ts) {
+      var dt = lastTs ? Math.min(0.05, (ts - lastTs) / 1000) : 0;
+      lastTs = ts;
+
+      game.mana = Math.min(MAX_MANA, game.mana + PASSIVE_MANA_PER_SEC * dt);
+
+      game.towers.forEach(function (t) { t.update(dt); });
+
+      game.enemies.forEach(function (e) { e.update(dt); });
+      var remaining = [];
+      game.enemies.forEach(function (e) {
+        if (e.reachedEnd()) {
           game.lives--;
-          game.enemies = game.enemies.filter(e => e !== enemy);
+        } else {
+          remaining.push(e);
         }
       });
+      game.enemies = remaining;
 
-      if (game.isWaveActive && game.enemies.length === 0) {
+      if (game.isWaveActive && game.enemies.length === 0 && game.enemiesToSpawn === 0) {
+        game.isWaveActive = false;
         if (game.wave < game.maxWaves) {
           game.wave++;
         } else {
           game.wave = 1;
-          if (game.level < 5) {
+          if (game.level < LEVEL_CONFIGS.length) {
             game.level++;
-            document.getElementById('levelDesc').textContent = game.levelDescriptions[game.level - 1];
+            showToast('¡Nivel ' + game.level + '!');
           } else {
-            alert('¡Victoria! ¡Completaste todos los niveles!');
-            location.reload();
+            showToast('¡Victoria! Reiniciando...');
+            setTimeout(function () { location.reload(); }, 1800);
           }
         }
-        game.isWaveActive = false;
         document.getElementById('startBtn').disabled = false;
       }
 
       if (game.lives <= 0) {
-        alert(`Game Over en Nivel ${game.level}, Ola ${game.wave}`);
-        location.reload();
+        game.lives = 0;
+        showToast('Game Over — Nivel ' + game.level + ', Ola ' + game.wave);
+        clearInterval(game.spawnTimer);
+        game.isWaveActive = false;
+        setTimeout(function () { location.reload(); }, 2200);
       }
 
+      drawGrid();
+      game.towers.forEach(function (t) { t.draw(t === game.selectedPlacedTower); });
+      game.enemies.forEach(function (e) { e.draw(); });
+      drawShots(dt);
       updateUI();
+
+      requestAnimationFrame(tick);
     }
 
-    function draw() {
-      ctx.fillStyle = '#0f3460';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-      // Grid
-      ctx.strokeStyle = 'rgba(233, 69, 96, 0.1)';
-      ctx.lineWidth = 1;
-      for (let i = 0; i < canvas.width; i += 40) {
-        ctx.beginPath();
-        ctx.moveTo(i, 0);
-        ctx.lineTo(i, canvas.height);
-        ctx.stroke();
-      }
-
-      // Path indicator
-      ctx.strokeStyle = '#e94560';
-      ctx.lineWidth = 2;
-      ctx.setLineDash([5, 5]);
-      ctx.beginPath();
-      ctx.moveTo(0, canvas.height / 2);
-      ctx.lineTo(canvas.width, canvas.height / 2);
-      ctx.stroke();
-      ctx.setLineDash([]);
-
-      game.towers.forEach(tower => tower.draw());
-      game.enemies.forEach(enemy => enemy.draw());
-
-      // UI text
-      ctx.fillStyle = '#4ecdc4';
-      ctx.font = '14px Arial';
-      ctx.fillText(`Torres: ${game.towers.length} | Enemigos: ${game.enemies.length}`, 15, 25);
+    /* =========================================================
+       8. INIT
+       ========================================================= */
+    function resize() {
+      if (!grid) return;
+      layoutGrid();
+      game.towers.forEach(function (t) {
+        var p = tileCenter(t.col, t.row);
+        t.x = p.x; t.y = p.y;
+      });
     }
 
-    function gameLoop() {
-      update();
-      draw();
-      requestAnimationFrame(gameLoop);
+    function init() {
+      buildGrid();
+      selectTower('fire', document.querySelector('.tower-chip[data-tower="fire"]'));
+      updateUI();
+      window.addEventListener('resize', resize);
+      window.addEventListener('orientationchange', function () { setTimeout(resize, 200); });
+      requestAnimationFrame(tick);
     }
 
-    selectTower('fire');
-    updateUI();
-    gameLoop();
-    window.addEventListener('resize', () => {
-      canvas.width = window.innerWidth - 280;
-    });
+    init();
+  })();
   </script>
 </body>
 </html>
