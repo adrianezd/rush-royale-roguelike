@@ -69,13 +69,13 @@
 
       <div class="tower-selector">
         <h3>Torres</h3>
-        <button class="tower-btn" onclick="selectTower('fire')">
+        <button class="tower-btn" onclick="selectTower('fire', this)">
           <span class="tower-icon fire"></span> Fuego (Ataque)
         </button>
-        <button class="tower-btn" onclick="selectTower('frost')">
+        <button class="tower-btn" onclick="selectTower('frost', this)">
           <span class="tower-icon frost"></span> Hielo (Lentitud)
         </button>
-        <button class="tower-btn" onclick="selectTower('nature')">
+        <button class="tower-btn" onclick="selectTower('nature', this)">
           <span class="tower-icon nature"></span> Naturaleza (Rango)
         </button>
       </div>
@@ -256,10 +256,10 @@
       }
     }
 
-    function selectTower(type) {
+    function selectTower(type, btnEl) {
       game.selectedTower = type;
       document.querySelectorAll('.tower-btn').forEach(btn => btn.classList.remove('selected'));
-      event.target.closest('.tower-btn').classList.add('selected');
+      if (btnEl) btnEl.classList.add('selected');
 
       const tower = TOWER_TYPES[type];
       document.getElementById('towerName').textContent = tower.name;
