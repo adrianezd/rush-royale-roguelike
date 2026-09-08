@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <radialGradient id="baseG" cx="50%" cy="30%" r="75%">
+      <stop offset="0%" stop-color="#3d4d55"/>
+      <stop offset="100%" stop-color="#1f272c"/>
+    </radialGradient>
+    <linearGradient id="iceG" x1="0" y1="1" x2="0.25" y2="0">
+      <stop offset="0%" stop-color="#157077"/>
+      <stop offset="55%" stop-color="#4ecdc4"/>
+      <stop offset="100%" stop-color="#eafffb"/>
+    </linearGradient>
+  </defs>
+  <ellipse cx="50" cy="83" rx="30" ry="8" fill="#000" opacity="0.3"/>
+  <ellipse cx="50" cy="72" rx="34" ry="14" fill="url(#baseG)" stroke="#11171a" stroke-width="2.5"/>
+  <rect x="27" y="44" width="46" height="30" rx="7" fill="url(#baseG)" stroke="#11171a" stroke-width="2.5"/>
+  <circle cx="35" cy="50" r="3" fill="#0b1214"/>
+  <circle cx="65" cy="50" r="3" fill="#0b1214"/>
+  <polygon points="50,8 63,42 50,62 37,42" fill="url(#iceG)" stroke="#0c4a50" stroke-width="1.5"/>
+  <polygon points="50,8 57,42 50,62" fill="#ffffff" opacity="0.4"/>
+  <polygon points="28,50 39,42 39,60 26,63" fill="url(#iceG)" stroke="#0c4a50" stroke-width="1.2"/>
+  <polygon points="72,50 61,42 61,60 74,63" fill="url(#iceG)" stroke="#0c4a50" stroke-width="1.2"/>
+</svg>

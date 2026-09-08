@@ -130,7 +130,7 @@
     }
     .tower-chip:active { transform: scale(0.95); }
     .tower-chip.selected { background: #e94560; border-color: #ff8fa3; color: #1a1a2e; }
-    .tower-dot { width: 20px; height: 20px; border-radius: 50%; box-shadow: inset 0 -3px 5px rgba(0,0,0,0.3), 0 0 6px currentColor; }
+    .tower-icon { width: 30px; height: 30px; object-fit: contain; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.4)); }
     .tower-cost { font-size: 0.66rem; opacity: 0.85; }
 
     #actionRow {
@@ -209,17 +209,17 @@
     <div class="mana-bar"><div class="mana-fill" id="manaBar"></div></div>
     <div id="towerRow">
       <button class="tower-chip" data-tower="fire" onclick="selectTower('fire', this)">
-        <span class="tower-dot" style="background:#e94560;color:#e94560;"></span>
+        <img class="tower-icon" src="assets/towers/fire.svg" alt="">
         <span>Fuego</span>
         <span class="tower-cost" id="costFire"></span>
       </button>
       <button class="tower-chip" data-tower="frost" onclick="selectTower('frost', this)">
-        <span class="tower-dot" style="background:#4ecdc4;color:#4ecdc4;"></span>
+        <img class="tower-icon" src="assets/towers/frost.svg" alt="">
         <span>Hielo</span>
         <span class="tower-cost" id="costFrost"></span>
       </button>
       <button class="tower-chip" data-tower="nature" onclick="selectTower('nature', this)">
-        <span class="tower-dot" style="background:#44b78b;color:#44b78b;"></span>
+        <img class="tower-icon" src="assets/towers/nature.svg" alt="">
         <span>Bosque</span>
         <span class="tower-cost" id="costNature"></span>
       </button>
@@ -238,10 +238,17 @@
        1. CONFIG
        ========================================================= */
     var TOWER_TYPES = {
-      fire:   { name: 'Fuego',   color: '#e94560', damage: 22, rangeTiles: 2.3, speed: 1.0, manaCost: 30, desc: 'Daño directo alto.' },
-      frost:  { name: 'Hielo',   color: '#4ecdc4', damage: 10, rangeTiles: 2.0, speed: 0.9, manaCost: 25, desc: 'Ralentiza al enemigo.' },
-      nature: { name: 'Bosque',  color: '#44b78b', damage: 14, rangeTiles: 3.0, speed: 1.15, manaCost: 35, desc: 'Alcance largo.' }
+      fire:   { name: 'Fuego',   color: '#e94560', damage: 22, rangeTiles: 2.3, speed: 1.0, manaCost: 30, desc: 'Daño directo alto.', icon: 'assets/towers/fire.svg' },
+      frost:  { name: 'Hielo',   color: '#4ecdc4', damage: 10, rangeTiles: 2.0, speed: 0.9, manaCost: 25, desc: 'Ralentiza al enemigo.', icon: 'assets/towers/frost.svg' },
+      nature: { name: 'Bosque',  color: '#44b78b', damage: 14, rangeTiles: 3.0, speed: 1.15, manaCost: 35, desc: 'Alcance largo.', icon: 'assets/towers/nature.svg' }
     };
+
+    var towerIconImages = {};
+    Object.keys(TOWER_TYPES).forEach(function (key) {
+      var img = new Image();
+      img.src = TOWER_TYPES[key].icon;
+      towerIconImages[key] = img;
+    });
 
     var LEVEL_CONFIGS = [
       { enemies: 8,  health: 22, speed: 1.0, reward: 9,  spawnMs: 900 },
@@ -523,22 +530,18 @@
         ctx.stroke();
       }
 
-      ctx.fillStyle = 'rgba(0,0,0,0.25)';
-      ctx.beginPath();
-      ctx.ellipse(this.x, this.y + ts * 0.22, ts * 0.28, ts * 0.1, 0, 0, Math.PI * 2);
-      ctx.fill();
-
-      var r = ts * 0.32;
-      var grad = ctx.createRadialGradient(this.x - r * 0.3, this.y - r * 0.4, r * 0.1, this.x, this.y, r);
-      grad.addColorStop(0, shade(this.color, 40));
-      grad.addColorStop(1, this.color);
-      ctx.fillStyle = grad;
-      ctx.beginPath();
-      ctx.arc(this.x, this.y, r, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.lineWidth = 2;
-      ctx.strokeStyle = 'rgba(255,255,255,0.5)';
-      ctx.stroke();
+      var icon = towerIconImages[this.type];
+      var dSize = ts * 1.32;
+      var groundFrac = 0.76; // fraction of the icon's height that sits at tile center (its base)
+      if (icon && icon.complete && icon.naturalWidth) {
+        ctx.drawImage(icon, this.x - dSize / 2, this.y - dSize * groundFrac, dSize, dSize);
+      } else {
+        var r = ts * 0.32;
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, r, 0, Math.PI * 2);
+        ctx.fill();
+      }
 
       if (this.level > 1) {
         ctx.fillStyle = '#FFD700';
