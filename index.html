@@ -355,7 +355,12 @@
     // número de filas/columnas.
     var GRID_SIZE = 9;
     function chooseGridDims() {
-      return { cols: GRID_SIZE, rows: GRID_SIZE, vertical: Math.random() < 0.5, reverse: Math.random() < 0.5 };
+      return {
+        cols: GRID_SIZE, rows: GRID_SIZE,
+        vertical: Math.random() < 0.5,
+        reverse: Math.random() < 0.5,
+        laneCount: Math.random() < 0.5 ? 1 : 2
+      };
     }
 
     // Camino de 1 celda de ancho de verdad: nunca hay 3 o más casillas
@@ -367,10 +372,19 @@
     // casilla se fuerza aparte (ver trimSingleCellEntrance): meterlo como
     // regla DENTRO de esta búsqueda reduce demasiado las ramas válidas y
     // el backtracking falla mucho más a menudo.
-    function generatePathAttempt(cols, rows, vertical, nodeCap) {
+    // lateralBias sube la probabilidad de girar en cada paso (además de los
+    // giros obligatorios por la regla de fila): con más giros el camino se
+    // alarga y recorre más tablero en vez de ir casi en línea recta de un
+    // borde al otro. preOccupied (opcional) son celdas de OTRO camino ya
+    // colocado -- se tratan como ocupadas desde el principio, así el
+    // segundo carril nunca las pisa y tampoco deja 3 en fila entre los dos.
+    function generatePathAttempt(cols, rows, vertical, nodeCap, lateralBias, preOccupied) {
       var priLen = vertical ? rows : cols;
       var secLen = vertical ? cols : rows;
       var pathSet = {};
+      if (preOccupied) {
+        for (var k in preOccupied) pathSet[k] = true;
+      }
       function keyOf(row, col) { return row + ',' + col; }
       function occupied(row, col) { return !!pathSet[keyOf(row, col)]; }
       function inBounds(cell) {
@@ -387,6 +401,7 @@
 
       var startSec = randInt(1, secLen - 2);
       var start = vertical ? { row: 0, col: startSec } : { row: startSec, col: 0 };
+      if (occupied(start.row, start.col)) return { cells: [start], ok: false };
       var cells = [start];
       pathSet[keyOf(start.row, start.col)] = true;
       var nodes = 0;
@@ -400,7 +415,7 @@
         var lateralDir = Math.random() < 0.5 ? -1 : 1;
         var lateralStep = vertical ? { row: cur.row, col: cur.col + lateralDir } : { row: cur.row + lateralDir, col: cur.col };
         var altLateralStep = vertical ? { row: cur.row, col: cur.col - lateralDir } : { row: cur.row - lateralDir, col: cur.col };
-        var candidates = Math.random() < 0.4 ? [lateralStep, primaryStep, altLateralStep] : [primaryStep, lateralStep, altLateralStep];
+        var candidates = Math.random() < lateralBias ? [lateralStep, primaryStep, altLateralStep] : [primaryStep, lateralStep, altLateralStep];
         for (var i = 0; i < candidates.length; i++) {
           var cand = candidates[i];
           if (!inBounds(cand) || occupied(cand.row, cand.col) || wouldViolateRow(cand.row, cand.col)) continue;
@@ -431,11 +446,14 @@
     // genera igualmente un camino conectado y con entrada/salida de 1 sola
     // casilla sin backtracking, aceptando muy excepcionalmente alguna fila
     // de 3 en vez de dejar el camino roto o a medias.
-    function generatePathFallback(cols, rows, vertical) {
+    function generatePathFallback(cols, rows, vertical, lateralBias, preOccupied) {
       var priLen = vertical ? rows : cols;
       var secLen = vertical ? cols : rows;
       function mk(p, s) { return vertical ? { col: s, row: p } : { col: p, row: s }; }
       var pathSet = {};
+      if (preOccupied) {
+        for (var k in preOccupied) pathSet[k] = true;
+      }
       function keyOf(row, col) { return row + ',' + col; }
       function occupied(row, col) { return !!pathSet[keyOf(row, col)]; }
       function wouldViolateRow(row, col) {
@@ -444,6 +462,7 @@
         return (l1 && l2) || (r1 && r2) || (l1 && r1);
       }
       var sec = randInt(1, secLen - 2);
+      for (var tries = 0; tries < secLen && occupied(mk(0, sec).row, mk(0, sec).col); tries++) sec = randInt(1, secLen - 2);
       var pri = 0;
       var cells = [mk(pri, sec)];
       pathSet[keyOf(cells[0].row, cells[0].col)] = true;
@@ -451,7 +470,7 @@
         var canLateralNow = pri > 0 && pri < priLen - 2;
         var straightLanding = mk(pri + 1, sec);
         var mustDivert = canLateralNow && wouldViolateRow(straightLanding.row, straightLanding.col);
-        if (canLateralNow && (mustDivert || Math.random() < 0.4)) {
+        if (canLateralNow && (mustDivert || Math.random() < lateralBias)) {
           var dir = Math.random() < 0.5 ? -1 : 1;
           var order = [sec + dir, sec - dir];
           for (var i = 0; i < order.length; i++) {
@@ -473,12 +492,29 @@
       return cells;
     }
 
-    function generatePathCells(cols, rows, vertical) {
+    // 0.72 en vez del 0.4 original: gira mucho más a menudo, así el camino
+    // serpentea más y recorre bastante más tablero en vez de ir casi recto
+    // de un lado al otro.
+    var PATH_LATERAL_BIAS = 0.72;
+
+    function generatePathCells(cols, rows, vertical, preOccupied) {
       for (var attempt = 0; attempt < 20; attempt++) {
-        var res = generatePathAttempt(cols, rows, vertical, 4000);
+        var res = generatePathAttempt(cols, rows, vertical, 4000, PATH_LATERAL_BIAS, preOccupied);
         if (res.ok) return trimSingleCellEntrance(res.cells, vertical);
       }
-      return generatePathFallback(cols, rows, vertical);
+      return generatePathFallback(cols, rows, vertical, PATH_LATERAL_BIAS, preOccupied);
+    }
+
+    // 1 o 2 carriles independientes: el segundo (si toca) se genera
+    // evitando por completo las casillas del primero, así nunca se pisan ni
+    // dejan 3 en fila entre ambos.
+    function generateLanes(cols, rows, vertical, laneCount) {
+      var lane1 = generatePathCells(cols, rows, vertical);
+      if (laneCount < 2) return [lane1];
+      var occupied1 = {};
+      lane1.forEach(function (c) { occupied1[c.row + ',' + c.col] = true; });
+      var lane2 = generatePathCells(cols, rows, vertical, occupied1);
+      return [lane1, lane2];
     }
 
     function seededRand(seed) {
@@ -488,10 +524,10 @@
 
     function buildGrid() {
       var dims = chooseGridDims();
-      var pathCells = generatePathCells(dims.cols, dims.rows, dims.vertical);
-      if (dims.reverse) pathCells = pathCells.slice().reverse();
+      var lanesCells = generateLanes(dims.cols, dims.rows, dims.vertical, dims.laneCount);
+      if (dims.reverse) lanesCells = lanesCells.map(function (cells) { return cells.slice().reverse(); });
       var pathSet = {};
-      pathCells.forEach(function (c) { pathSet[key(c.col, c.row)] = true; });
+      lanesCells.forEach(function (cells) { cells.forEach(function (c) { pathSet[key(c.col, c.row)] = true; }); });
 
       var decor = [];
       for (var r = 0; r < dims.rows; r++) {
@@ -513,8 +549,9 @@
 
       grid = {
         cols: dims.cols, rows: dims.rows, vertical: dims.vertical,
-        pathCells: pathCells, pathSet: pathSet, decor: decor,
-        tileSize: 0, offsetX: 0, offsetY: 0, waypoints: []
+        lanes: lanesCells.map(function (cells) { return { pathCells: cells, waypoints: [] }; }),
+        pathSet: pathSet, decor: decor,
+        tileSize: 0, offsetX: 0, offsetY: 0
       };
       layoutGrid();
     }
@@ -540,7 +577,9 @@
       canvas.height = Math.round(h * dpr);
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-      grid.waypoints = grid.pathCells.map(function (c) { return tileCenter(c.col, c.row); });
+      grid.lanes.forEach(function (lane) {
+        lane.waypoints = lane.pathCells.map(function (c) { return tileCenter(c.col, c.row); });
+      });
     }
 
     function tileCenter(col, row) {
@@ -572,8 +611,9 @@
     /* =========================================================
        4. ENTITIES
        ========================================================= */
-    function Enemy(level) {
+    function Enemy(level, laneIndex) {
       var cfg = LEVEL_CONFIGS[level - 1];
+      this.laneIndex = laneIndex || 0;
       this.segIndex = 0;
       this.segT = 0;
       this.health = cfg.health;
@@ -581,11 +621,12 @@
       this.speed = cfg.speed; // tiles per second
       this.slowFactor = 1;
       this.sprite = enemySpriteForLevel(level);
-      var p = tileCenter(grid.pathCells[0].col, grid.pathCells[0].row);
+      var lane = grid.lanes[this.laneIndex];
+      var p = tileCenter(lane.pathCells[0].col, lane.pathCells[0].row);
       this.x = p.x; this.y = p.y;
     }
     Enemy.prototype.update = function (dt) {
-      var wps = grid.waypoints;
+      var wps = grid.lanes[this.laneIndex].waypoints;
       if (this.segIndex >= wps.length - 1) return;
       var stepTiles = this.speed * this.slowFactor * dt; // tiles this frame
       this.segT += stepTiles;
@@ -601,7 +642,7 @@
       this.slowFactor = Math.min(1, this.slowFactor + dt * 0.6);
     };
     Enemy.prototype.reachedEnd = function () {
-      return this.segIndex >= grid.waypoints.length - 1;
+      return this.segIndex >= grid.lanes[this.laneIndex].waypoints.length - 1;
     };
     Enemy.prototype.takeDamage = function (dmg) {
       this.health -= dmg;
@@ -775,12 +816,14 @@
         });
       });
 
-      // Marcadores de entrada (spawn) y meta (tu base) -- para que se vea
-      // claramente por dónde entran los enemigos y qué defiendes.
-      if (grid.waypoints.length) {
-        drawEndpointMarker(grid.waypoints[0], '#4ecdc4', '▶');
-        drawEndpointMarker(grid.waypoints[grid.waypoints.length - 1], '#ffd166', '🏁');
-      }
+      // Marcadores de entrada (spawn) y meta (tu base) en cada carril --
+      // para que se vea claramente por dónde entran los enemigos y qué
+      // defiendes, tanto si hay 1 camino como si hay 2.
+      grid.lanes.forEach(function (lane) {
+        if (!lane.waypoints.length) return;
+        drawEndpointMarker(lane.waypoints[0], '#4ecdc4', '▶');
+        drawEndpointMarker(lane.waypoints[lane.waypoints.length - 1], '#ffd166', '🏁');
+      });
     }
 
     function drawEndpointMarker(pt, color, symbol) {
@@ -941,7 +984,8 @@
         game.spawnAccum += dt;
         while (game.spawnAccum >= game.spawnIntervalSec && game.enemiesToSpawn > 0) {
           game.spawnAccum -= game.spawnIntervalSec;
-          game.enemies.push(new Enemy(game.level));
+          var laneIndex = Math.floor(Math.random() * grid.lanes.length);
+          game.enemies.push(new Enemy(game.level, laneIndex));
           game.enemiesToSpawn--;
         }
       }
