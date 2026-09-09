@@ -222,7 +222,7 @@
   <div id="hud">
     <div class="hud-item" id="hudMana"><span class="hud-icon">💧</span><span id="manaText">0</span></div>
     <div class="hud-item" id="hudLevel">Nv <span id="levelNum">1</span> · Ola <span id="waveNum">1</span>/<span id="waveMax">3</span></div>
-    <div class="hud-item" id="hudLives"><span class="hud-icon">❤</span><span id="lives">20</span></div>
+    <div class="hud-item" id="hudLives"><span class="hud-icon">❤</span><span id="lives">16</span></div>
     <div class="speed-group" id="speedGroup">
       <button class="speed-btn selected" data-speed="1" onclick="setGameSpeed(1, this)">x1</button>
       <button class="speed-btn" data-speed="2" onclick="setGameSpeed(2, this)">x2</button>
@@ -299,13 +299,31 @@
       return 'brute';
     }
 
+    // Progresión más larga y más dura: 8 niveles en vez de 5, con la salud
+    // y la velocidad subiendo más deprisa hacia el final -- antes el juego
+    // se acababa ("¡Victoria!") justo cuando empezaba a apretar de verdad.
     var LEVEL_CONFIGS = [
-      { enemies: 8,  health: 31, speed: 1.0, reward: 9,  spawnMs: 900 },
-      { enemies: 11, health: 45, speed: 1.15, reward: 10, spawnMs: 820 },
-      { enemies: 14, health: 62, speed: 1.3, reward: 11, spawnMs: 760 },
-      { enemies: 18, health: 81, speed: 1.45, reward: 12, spawnMs: 700 },
-      { enemies: 22, health: 105, speed: 1.6, reward: 13, spawnMs: 650 }
+      { enemies: 8,  health: 31,  speed: 1.0,  reward: 9,  spawnMs: 900 },
+      { enemies: 11, health: 45,  speed: 1.15, reward: 10, spawnMs: 820 },
+      { enemies: 14, health: 62,  speed: 1.3,  reward: 11, spawnMs: 760 },
+      { enemies: 18, health: 84,  speed: 1.5,  reward: 12, spawnMs: 690 },
+      { enemies: 22, health: 112, speed: 1.7,  reward: 13, spawnMs: 620 },
+      { enemies: 26, health: 145, speed: 1.85, reward: 15, spawnMs: 560 },
+      { enemies: 30, health: 185, speed: 2.0,  reward: 17, spawnMs: 510 },
+      { enemies: 34, health: 230, speed: 2.15, reward: 20, spawnMs: 470 }
     ];
+
+    // Élite: 1 de cada ELITE_EVERY enemigos de la oleada sale reforzado
+    // (más vida y algo más rápido), con un aro dorado para que se note a
+    // simple vista cuál conviene priorizar.
+    var ELITE_EVERY = 6;
+    var ELITE_HEALTH_MULT = 1.9;
+    var ELITE_SPEED_MULT = 1.15;
+
+    // Con 2 carriles a la vez, repartir la MISMA cantidad de enemigos entre
+    // ambos los hacía más fáciles de defender (menos presión por carril) --
+    // así que con 2 carriles se manda más cantidad total, no la misma.
+    var TWO_LANE_ENEMY_MULT = 1.4;
 
     var PASSIVE_MANA_PER_SEC = 4;
     var START_MANA = 55;
@@ -328,14 +346,15 @@
       level: 1,
       wave: 1,
       maxWaves: 3,
-      lives: 20,
+      lives: 16,
       mana: START_MANA,
       selectedTower: 'fire',
       selectedPlacedTower: null,
       towers: [],
       enemies: [],
       isWaveActive: false,
-      enemiesToSpawn: 0
+      enemiesToSpawn: 0,
+      enemiesSpawnedThisWave: 0
     };
 
     var grid = null; // { cols, rows, vertical, tileSize, offsetX, offsetY, pathSet, decor, waypoints }
@@ -611,14 +630,15 @@
     /* =========================================================
        4. ENTITIES
        ========================================================= */
-    function Enemy(level, laneIndex) {
+    function Enemy(level, laneIndex, isElite) {
       var cfg = LEVEL_CONFIGS[level - 1];
       this.laneIndex = laneIndex || 0;
+      this.isElite = !!isElite;
       this.segIndex = 0;
       this.segT = 0;
-      this.health = cfg.health;
-      this.maxHealth = cfg.health;
-      this.speed = cfg.speed; // tiles per second
+      this.health = cfg.health * (this.isElite ? ELITE_HEALTH_MULT : 1);
+      this.maxHealth = this.health;
+      this.speed = cfg.speed * (this.isElite ? ELITE_SPEED_MULT : 1); // tiles per second
       this.slowFactor = 1;
       this.sprite = enemySpriteForLevel(level);
       var lane = grid.lanes[this.laneIndex];
@@ -654,9 +674,16 @@
     Enemy.prototype.draw = function () {
       var r = grid.tileSize * 0.28;
       var hp = this.health / this.maxHealth;
+      if (this.isElite) {
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, grid.tileSize * 0.42, 0, Math.PI * 2);
+        ctx.strokeStyle = '#ffd166';
+        ctx.lineWidth = Math.max(2, grid.tileSize * 0.05);
+        ctx.stroke();
+      }
       var icon = enemyIconImages[this.sprite];
       if (icon && icon.complete && icon.naturalWidth) {
-        var dSize = grid.tileSize * 0.78;
+        var dSize = grid.tileSize * (this.isElite ? 0.9 : 0.78);
         ctx.drawImage(icon, this.x - dSize / 2, this.y - dSize * 0.62, dSize, dSize);
       } else {
         ctx.fillStyle = '#3a8fd9';
@@ -948,7 +975,9 @@
       document.getElementById('startBtn').disabled = true;
 
       var cfg = LEVEL_CONFIGS[game.level - 1];
-      game.enemiesToSpawn = cfg.enemies;
+      var laneMult = grid.lanes.length > 1 ? TWO_LANE_ENEMY_MULT : 1;
+      game.enemiesToSpawn = Math.round(cfg.enemies * laneMult);
+      game.enemiesSpawnedThisWave = 0;
       // Acumulador impulsado por dt (no setInterval real) para que el spawn
       // también respete el multiplicador de velocidad: a x16, dt ya viene
       // escalado x16 en cada frame, así que este contador baja igual de
@@ -985,7 +1014,9 @@
         while (game.spawnAccum >= game.spawnIntervalSec && game.enemiesToSpawn > 0) {
           game.spawnAccum -= game.spawnIntervalSec;
           var laneIndex = Math.floor(Math.random() * grid.lanes.length);
-          game.enemies.push(new Enemy(game.level, laneIndex));
+          game.enemiesSpawnedThisWave++;
+          var isElite = game.enemiesSpawnedThisWave % ELITE_EVERY === 0;
+          game.enemies.push(new Enemy(game.level, laneIndex, isElite));
           game.enemiesToSpawn--;
         }
       }
