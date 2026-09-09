@@ -310,7 +310,6 @@
     var PASSIVE_MANA_PER_SEC = 4;
     var START_MANA = 55;
     var MAX_MANA = 150;
-    var TILE_TARGET_PX = 50;
     var gameSpeed = 1;
     window.setGameSpeed = function (mult, btnEl) {
       gameSpeed = mult;
@@ -349,34 +348,137 @@
     function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
     function key(c, r) { return c + ',' + r; }
 
-    function chooseGridDims(w, h) {
-      var cols = clamp(Math.round(w / TILE_TARGET_PX), 5, 14);
-      var rows = clamp(Math.round(h / TILE_TARGET_PX), 6, 16);
-      return { cols: cols, rows: rows, vertical: rows >= cols };
+    // Tamaño de tablero FIJO: el mapa tiene que verse igual de "grande"
+    // (mismo nº de casillas) en móvil que en el resto de pantallas -- solo
+    // cambia el tamaño en píxeles de cada casilla para encajar en el hueco
+    // disponible (letterboxing ya soportado por layoutGrid), nunca el
+    // número de filas/columnas.
+    var GRID_SIZE = 9;
+    function chooseGridDims() {
+      return { cols: GRID_SIZE, rows: GRID_SIZE, vertical: Math.random() < 0.5, reverse: Math.random() < 0.5 };
     }
 
-    function generatePathCells(cols, rows, vertical) {
+    // Camino de 1 celda de ancho de verdad: nunca hay 3 o más casillas
+    // seguidas en la misma fila, nunca se revisita una celda, y es un
+    // paseo realmente conectado (solo vecinos, nunca en diagonal). Se
+    // resuelve con backtracking real: probar y deshacer hasta encontrar un
+    // camino válido, no solo "seguir y esperar que cuele" -- con eso se
+    // quedaba corto o dejaba camino roto. La entrada/salida de 1 sola
+    // casilla se fuerza aparte (ver trimSingleCellEntrance): meterlo como
+    // regla DENTRO de esta búsqueda reduce demasiado las ramas válidas y
+    // el backtracking falla mucho más a menudo.
+    function generatePathAttempt(cols, rows, vertical, nodeCap) {
       var priLen = vertical ? rows : cols;
       var secLen = vertical ? cols : rows;
+      var pathSet = {};
+      function keyOf(row, col) { return row + ',' + col; }
+      function occupied(row, col) { return !!pathSet[keyOf(row, col)]; }
+      function inBounds(cell) {
+        var p = vertical ? cell.row : cell.col;
+        var s = vertical ? cell.col : cell.row;
+        return p >= 0 && p < priLen && s >= 0 && s < secLen;
+      }
+      function wouldViolateRow(row, col) {
+        var l1 = occupied(row, col - 1), l2 = occupied(row, col - 2);
+        var r1 = occupied(row, col + 1), r2 = occupied(row, col + 2);
+        return (l1 && l2) || (r1 && r2) || (l1 && r1);
+      }
+      function primaryOf(cell) { return vertical ? cell.row : cell.col; }
+
+      var startSec = randInt(1, secLen - 2);
+      var start = vertical ? { row: 0, col: startSec } : { row: startSec, col: 0 };
+      var cells = [start];
+      pathSet[keyOf(start.row, start.col)] = true;
+      var nodes = 0;
+
+      function step() {
+        nodes++;
+        if (nodes > nodeCap) return false;
+        var cur = cells[cells.length - 1];
+        if (primaryOf(cur) >= priLen - 1) return true;
+        var primaryStep = vertical ? { row: cur.row + 1, col: cur.col } : { row: cur.row, col: cur.col + 1 };
+        var lateralDir = Math.random() < 0.5 ? -1 : 1;
+        var lateralStep = vertical ? { row: cur.row, col: cur.col + lateralDir } : { row: cur.row + lateralDir, col: cur.col };
+        var altLateralStep = vertical ? { row: cur.row, col: cur.col - lateralDir } : { row: cur.row - lateralDir, col: cur.col };
+        var candidates = Math.random() < 0.4 ? [lateralStep, primaryStep, altLateralStep] : [primaryStep, lateralStep, altLateralStep];
+        for (var i = 0; i < candidates.length; i++) {
+          var cand = candidates[i];
+          if (!inBounds(cand) || occupied(cand.row, cand.col) || wouldViolateRow(cand.row, cand.col)) continue;
+          cells.push(cand);
+          pathSet[keyOf(cand.row, cand.col)] = true;
+          if (step()) return true;
+          cells.pop();
+          delete pathSet[keyOf(cand.row, cand.col)];
+        }
+        return false;
+      }
+      return { cells: cells, ok: step() };
+    }
+
+    // La salida ya sale sola con 1 celda (en cuanto pri llega al final la
+    // búsqueda para ahí mismo, sin más giros). La entrada puede salir con 2
+    // si el primer paso fue un giro lateral en vez de recto: en ese caso se
+    // quita la primera celda -- la segunda pasa a ser la entrada y sigue
+    // conectada igual con el resto del camino.
+    function trimSingleCellEntrance(cells, vertical) {
+      function primaryOf(c) { return vertical ? c.row : c.col; }
+      if (cells.length >= 2 && primaryOf(cells[0]) === primaryOf(cells[1])) return cells.slice(1);
+      return cells;
+    }
+
+    // Red de seguridad: si ninguno de los intentos con backtracking cuaja
+    // (no debería pasar casi nunca con un tablero cuadrado fijo pequeño),
+    // genera igualmente un camino conectado y con entrada/salida de 1 sola
+    // casilla sin backtracking, aceptando muy excepcionalmente alguna fila
+    // de 3 en vez de dejar el camino roto o a medias.
+    function generatePathFallback(cols, rows, vertical) {
+      var priLen = vertical ? rows : cols;
+      var secLen = vertical ? cols : rows;
+      function mk(p, s) { return vertical ? { col: s, row: p } : { col: p, row: s }; }
+      var pathSet = {};
+      function keyOf(row, col) { return row + ',' + col; }
+      function occupied(row, col) { return !!pathSet[keyOf(row, col)]; }
+      function wouldViolateRow(row, col) {
+        var l1 = occupied(row, col - 1), l2 = occupied(row, col - 2);
+        var r1 = occupied(row, col + 1), r2 = occupied(row, col + 2);
+        return (l1 && l2) || (r1 && r2) || (l1 && r1);
+      }
       var sec = randInt(1, secLen - 2);
       var pri = 0;
-      function mk(p, s) { return vertical ? { col: s, row: p } : { col: p, row: s }; }
       var cells = [mk(pri, sec)];
+      pathSet[keyOf(cells[0].row, cells[0].col)] = true;
       while (pri < priLen - 1) {
-        if (Math.random() < 0.65) {
+        var canLateralNow = pri > 0 && pri < priLen - 2;
+        var straightLanding = mk(pri + 1, sec);
+        var mustDivert = canLateralNow && wouldViolateRow(straightLanding.row, straightLanding.col);
+        if (canLateralNow && (mustDivert || Math.random() < 0.4)) {
           var dir = Math.random() < 0.5 ? -1 : 1;
-          var runLen = 1 + Math.floor(Math.random() * 2);
-          for (var i = 0; i < runLen; i++) {
-            var next = sec + dir;
-            if (next < 0 || next >= secLen) break;
+          var order = [sec + dir, sec - dir];
+          for (var i = 0; i < order.length; i++) {
+            var next = order[i];
+            if (next < 0 || next >= secLen) continue;
+            var cand = mk(pri, next);
+            if (occupied(cand.row, cand.col) || wouldViolateRow(cand.row, cand.col)) continue;
             sec = next;
-            cells.push(mk(pri, sec));
+            cells.push(cand);
+            pathSet[keyOf(cand.row, cand.col)] = true;
+            break;
           }
         }
         pri++;
-        cells.push(mk(pri, sec));
+        var landing = mk(pri, sec);
+        cells.push(landing);
+        pathSet[keyOf(landing.row, landing.col)] = true;
       }
       return cells;
+    }
+
+    function generatePathCells(cols, rows, vertical) {
+      for (var attempt = 0; attempt < 20; attempt++) {
+        var res = generatePathAttempt(cols, rows, vertical, 4000);
+        if (res.ok) return trimSingleCellEntrance(res.cells, vertical);
+      }
+      return generatePathFallback(cols, rows, vertical);
     }
 
     function seededRand(seed) {
@@ -385,10 +487,9 @@
     }
 
     function buildGrid() {
-      var w = boardWrap.clientWidth;
-      var h = boardWrap.clientHeight;
-      var dims = chooseGridDims(w, h);
+      var dims = chooseGridDims();
       var pathCells = generatePathCells(dims.cols, dims.rows, dims.vertical);
+      if (dims.reverse) pathCells = pathCells.slice().reverse();
       var pathSet = {};
       pathCells.forEach(function (c) { pathSet[key(c.col, c.row)] = true; });
 
@@ -673,6 +774,32 @@
           ctx.stroke();
         });
       });
+
+      // Marcadores de entrada (spawn) y meta (tu base) -- para que se vea
+      // claramente por dónde entran los enemigos y qué defiendes.
+      if (grid.waypoints.length) {
+        drawEndpointMarker(grid.waypoints[0], '#4ecdc4', '▶');
+        drawEndpointMarker(grid.waypoints[grid.waypoints.length - 1], '#ffd166', '🏁');
+      }
+    }
+
+    function drawEndpointMarker(pt, color, symbol) {
+      var ts = grid.tileSize;
+      var r = ts * 0.34;
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(pt.x, pt.y, r, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(10,14,26,0.55)';
+      ctx.fill();
+      ctx.lineWidth = Math.max(2, ts * 0.06);
+      ctx.strokeStyle = color;
+      ctx.stroke();
+      ctx.fillStyle = color;
+      ctx.font = Math.round(ts * 0.36) + 'px Arial';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(symbol, pt.x, pt.y + ts * 0.02);
+      ctx.restore();
     }
 
     function drawShots(dt) {
