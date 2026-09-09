@@ -22,9 +22,11 @@
     #hud {
       flex: 0 0 auto;
       display: flex;
+      flex-wrap: wrap;
       align-items: center;
       justify-content: space-between;
       gap: 6px;
+      row-gap: 6px;
       padding: max(8px, env(safe-area-inset-top)) 10px 8px;
       background: #0f3460;
       border-bottom: 2px solid #e94560;
@@ -45,6 +47,29 @@
     #hudMana { color: #4ecdc4; }
     #hudLives { color: #ff6b7a; }
     #hudLevel { color: #ffd166; }
+
+    .speed-group {
+      display: flex;
+      gap: 2px;
+      background: rgba(0,0,0,0.25);
+      padding: 3px;
+      border-radius: 20px;
+      order: 10;
+      width: 100%;
+      justify-content: center;
+    }
+    .speed-btn {
+      padding: 4px 9px;
+      border-radius: 16px;
+      border: none;
+      background: transparent;
+      color: #b8c1d1;
+      font-size: 0.7rem;
+      font-weight: 700;
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+    .speed-btn.selected { background: #e94560; color: #1a1a2e; }
 
     /* ---------- Board ---------- */
     #board-wrap {
@@ -198,6 +223,13 @@
     <div class="hud-item" id="hudMana"><span class="hud-icon">💧</span><span id="manaText">0</span></div>
     <div class="hud-item" id="hudLevel">Nv <span id="levelNum">1</span> · Ola <span id="waveNum">1</span>/<span id="waveMax">3</span></div>
     <div class="hud-item" id="hudLives"><span class="hud-icon">❤</span><span id="lives">20</span></div>
+    <div class="speed-group" id="speedGroup">
+      <button class="speed-btn selected" data-speed="1" onclick="setGameSpeed(1, this)">x1</button>
+      <button class="speed-btn" data-speed="2" onclick="setGameSpeed(2, this)">x2</button>
+      <button class="speed-btn" data-speed="4" onclick="setGameSpeed(4, this)">x4</button>
+      <button class="speed-btn" data-speed="8" onclick="setGameSpeed(8, this)">x8</button>
+      <button class="speed-btn" data-speed="16" onclick="setGameSpeed(16, this)">x16</button>
+    </div>
   </div>
 
   <div id="board-wrap">
@@ -238,9 +270,9 @@
        1. CONFIG
        ========================================================= */
     var TOWER_TYPES = {
-      fire:   { name: 'Fuego',   color: '#e94560', damage: 22, rangeTiles: 2.3, speed: 1.0, manaCost: 30, desc: 'Daño directo alto.', icon: 'assets/towers/fire.svg' },
-      frost:  { name: 'Hielo',   color: '#4ecdc4', damage: 10, rangeTiles: 2.0, speed: 0.9, manaCost: 25, desc: 'Ralentiza al enemigo.', icon: 'assets/towers/frost.svg' },
-      nature: { name: 'Bosque',  color: '#44b78b', damage: 14, rangeTiles: 3.0, speed: 1.15, manaCost: 35, desc: 'Alcance largo.', icon: 'assets/towers/nature.svg' }
+      fire:   { name: 'Fuego',   color: '#e94560', damage: 22, rangeTiles: 2.3, speed: 1.0, manaCost: 45, desc: 'Daño directo alto.', icon: 'assets/towers/fire.svg' },
+      frost:  { name: 'Hielo',   color: '#4ecdc4', damage: 10, rangeTiles: 2.0, speed: 0.9, manaCost: 38, desc: 'Ralentiza al enemigo.', icon: 'assets/towers/frost.svg' },
+      nature: { name: 'Bosque',  color: '#44b78b', damage: 14, rangeTiles: 3.0, speed: 1.15, manaCost: 52, desc: 'Alcance largo.', icon: 'assets/towers/nature.svg' }
     };
 
     var towerIconImages = {};
@@ -268,17 +300,23 @@
     }
 
     var LEVEL_CONFIGS = [
-      { enemies: 8,  health: 22, speed: 1.0, reward: 9,  spawnMs: 900 },
-      { enemies: 11, health: 32, speed: 1.15, reward: 10, spawnMs: 820 },
-      { enemies: 14, health: 44, speed: 1.3, reward: 11, spawnMs: 760 },
-      { enemies: 18, health: 58, speed: 1.45, reward: 12, spawnMs: 700 },
-      { enemies: 22, health: 75, speed: 1.6, reward: 13, spawnMs: 650 }
+      { enemies: 8,  health: 31, speed: 1.0, reward: 9,  spawnMs: 900 },
+      { enemies: 11, health: 45, speed: 1.15, reward: 10, spawnMs: 820 },
+      { enemies: 14, health: 62, speed: 1.3, reward: 11, spawnMs: 760 },
+      { enemies: 18, health: 81, speed: 1.45, reward: 12, spawnMs: 700 },
+      { enemies: 22, health: 105, speed: 1.6, reward: 13, spawnMs: 650 }
     ];
 
     var PASSIVE_MANA_PER_SEC = 4;
     var START_MANA = 55;
     var MAX_MANA = 150;
     var TILE_TARGET_PX = 50;
+    var gameSpeed = 1;
+    window.setGameSpeed = function (mult, btnEl) {
+      gameSpeed = mult;
+      document.querySelectorAll('.speed-btn').forEach(function (b) { b.classList.remove('selected'); });
+      if (btnEl) btnEl.classList.add('selected');
+    };
 
     /* =========================================================
        2. STATE
@@ -298,8 +336,7 @@
       towers: [],
       enemies: [],
       isWaveActive: false,
-      enemiesToSpawn: 0,
-      spawnTimer: null
+      enemiesToSpawn: 0
     };
 
     var grid = null; // { cols, rows, vertical, tileSize, offsetX, offsetY, pathSet, decor, waypoints }
@@ -569,7 +606,7 @@
       }
     };
     Tower.prototype.upgradeCost = function () {
-      return Math.round(TOWER_TYPES[this.type].manaCost * 0.6 * this.level);
+      return Math.round(TOWER_TYPES[this.type].manaCost * 0.8 * this.level);
     };
     Tower.prototype.evolve = function () {
       if (this.level >= 3) return false;
@@ -742,15 +779,12 @@
 
       var cfg = LEVEL_CONFIGS[game.level - 1];
       game.enemiesToSpawn = cfg.enemies;
-      clearInterval(game.spawnTimer);
-      game.spawnTimer = setInterval(function () {
-        if (game.enemiesToSpawn > 0) {
-          game.enemies.push(new Enemy(game.level));
-          game.enemiesToSpawn--;
-        } else {
-          clearInterval(game.spawnTimer);
-        }
-      }, cfg.spawnMs);
+      // Acumulador impulsado por dt (no setInterval real) para que el spawn
+      // también respete el multiplicador de velocidad: a x16, dt ya viene
+      // escalado x16 en cada frame, así que este contador baja igual de
+      // rápido en tiempo de juego aunque el reloj real no se altere.
+      game.spawnIntervalSec = cfg.spawnMs / 1000;
+      game.spawnAccum = 0;
     }
 
     function updateUI() {
@@ -772,8 +806,18 @@
     game.shots = [];
 
     function tick(ts) {
-      var dt = lastTs ? Math.min(0.05, (ts - lastTs) / 1000) : 0;
+      var rawDt = lastTs ? Math.min(0.05, (ts - lastTs) / 1000) : 0;
       lastTs = ts;
+      var dt = rawDt * gameSpeed;
+
+      if (game.isWaveActive && game.enemiesToSpawn > 0) {
+        game.spawnAccum += dt;
+        while (game.spawnAccum >= game.spawnIntervalSec && game.enemiesToSpawn > 0) {
+          game.spawnAccum -= game.spawnIntervalSec;
+          game.enemies.push(new Enemy(game.level));
+          game.enemiesToSpawn--;
+        }
+      }
 
       game.mana = Math.min(MAX_MANA, game.mana + PASSIVE_MANA_PER_SEC * dt);
 
@@ -810,7 +854,7 @@
       if (game.lives <= 0) {
         game.lives = 0;
         showToast('Game Over — Nivel ' + game.level + ', Ola ' + game.wave);
-        clearInterval(game.spawnTimer);
+        game.enemiesToSpawn = 0;
         game.isWaveActive = false;
         setTimeout(function () { location.reload(); }, 2200);
       }
