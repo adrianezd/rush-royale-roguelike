@@ -6,17 +6,17 @@
   <title>Rush Royale Tower Defense</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    [hidden] { display: none !important; }
     html, body { height: 100%; overscroll-behavior: none; }
     body {
       font-family: 'Segoe UI', Arial, sans-serif;
       background: #12121f;
       color: #eee;
-      display: flex;
-      flex-direction: column;
       height: 100dvh;
       overflow: hidden;
       user-select: none;
     }
+    #gameScreen { display: flex; flex-direction: column; height: 100dvh; }
 
     /* ---------- HUD ---------- */
     #hud {
@@ -190,9 +190,97 @@
     .btn-start:active { transform: scale(0.96); }
     .btn-start:disabled { background: #555; color: #999; cursor: not-allowed; }
 
+    /* ---------- Menus ---------- */
+    .menu-screen {
+      min-height: 100dvh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 20px max(24px, env(safe-area-inset-bottom));
+      background: radial-gradient(circle at 50% 20%, #16213e, #0a0e1a 75%);
+    }
+    .menu-card {
+      width: 100%;
+      max-width: 360px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      position: relative;
+    }
+    .menu-title {
+      text-align: center;
+      font-size: 1.9rem;
+      font-weight: 800;
+      color: #eee;
+      line-height: 1.15;
+      margin-bottom: 12px;
+      text-shadow: 0 2px 10px rgba(233,69,96,0.4);
+    }
+    .menu-title span { color: #e94560; }
+    .menu-subtitle { text-align: center; font-size: 1.3rem; font-weight: 700; margin-bottom: 4px; }
+    .menu-hint { text-align: center; font-size: 0.82rem; color: #9aa4b8; margin-bottom: 4px; line-height: 1.5; }
+    .menu-btn {
+      padding: 16px 18px;
+      border-radius: 14px;
+      border: 2px solid rgba(233,69,96,0.5);
+      background: #16213e;
+      color: #eee;
+      font-size: 1.05rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      touch-action: manipulation;
+    }
+    .menu-btn:active { transform: scale(0.97); }
+    .menu-btn small { font-size: 0.72rem; font-weight: 500; opacity: 0.75; }
+    .menu-btn-primary { background: #e94560; border-color: #ff8fa3; color: #1a1a2e; }
+    .menu-back {
+      align-self: flex-start;
+      background: none;
+      border: none;
+      color: #9aa4b8;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      padding: 4px 0 8px;
+      touch-action: manipulation;
+    }
+    .adventure-levels { display: flex; flex-direction: column; gap: 10px; }
+    .adventure-level-btn {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      border-radius: 12px;
+      border: 2px solid rgba(78,205,196,0.4);
+      background: #16213e;
+      color: #eee;
+      cursor: pointer;
+      touch-action: manipulation;
+      text-align: left;
+    }
+    .adventure-level-btn:active { transform: scale(0.98); }
+    .adventure-level-num {
+      width: 34px; height: 34px;
+      border-radius: 50%;
+      background: #4ecdc4;
+      color: #0a0e1a;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .adventure-level-text { display: flex; flex-direction: column; }
+    .adventure-level-text strong { font-size: 0.95rem; }
+    .adventure-level-text span { font-size: 0.74rem; color: #9aa4b8; }
+
     /* ---------- Wide screens: side-by-side layout ---------- */
     @media (min-width: 780px) and (min-height: 500px) {
-      body { flex-direction: row; }
+      #gameScreen { flex-direction: row; }
       #hud {
         flex-direction: column;
         align-items: stretch;
@@ -219,46 +307,82 @@
   </style>
 </head>
 <body>
-  <div id="hud">
-    <div class="hud-item" id="hudMana"><span class="hud-icon">💧</span><span id="manaText">0</span></div>
-    <div class="hud-item" id="hudLevel">Nv <span id="levelNum">1</span> · Ola <span id="waveNum">1</span>/<span id="waveMax">3</span></div>
-    <div class="hud-item" id="hudLives"><span class="hud-icon">❤</span><span id="lives">16</span></div>
-    <div class="speed-group" id="speedGroup">
-      <button class="speed-btn selected" data-speed="1" onclick="setGameSpeed(1, this)">x1</button>
-      <button class="speed-btn" data-speed="2" onclick="setGameSpeed(2, this)">x2</button>
-      <button class="speed-btn" data-speed="4" onclick="setGameSpeed(4, this)">x4</button>
-      <button class="speed-btn" data-speed="8" onclick="setGameSpeed(8, this)">x8</button>
-      <button class="speed-btn" data-speed="16" onclick="setGameSpeed(16, this)">x16</button>
+  <div id="menuScreen" class="menu-screen">
+    <div class="menu-card">
+      <h1 class="menu-title">Rush Royale<br><span>Roguelike</span></h1>
+      <button class="menu-btn menu-btn-primary" onclick="showScreen('playSelectScreen')">Empezar</button>
+      <button class="menu-btn" onclick="showScreen('otrosScreen')">Otros</button>
     </div>
   </div>
 
-  <div id="board-wrap">
-    <canvas id="gameCanvas"></canvas>
-    <div id="toast"></div>
+  <div id="playSelectScreen" class="menu-screen" hidden>
+    <div class="menu-card">
+      <button class="menu-back" onclick="showScreen('menuScreen')">&larr; Volver</button>
+      <h2 class="menu-subtitle">Elige modo</h2>
+      <button class="menu-btn menu-btn-primary" onclick="startGame({ adventure: false })">Partida aleatoria<small>Mapa nuevo cada vez</small></button>
+      <button class="menu-btn" onclick="showScreen('adventureScreen')">Aventura<small>5 niveles fijos</small></button>
+    </div>
   </div>
 
-  <div id="controls">
-    <div class="mana-bar"><div class="mana-fill" id="manaBar"></div></div>
-    <div id="towerRow">
-      <button class="tower-chip" data-tower="fire" onclick="selectTower('fire', this)">
-        <img class="tower-icon" src="assets/towers/fire.svg" alt="">
-        <span>Fuego</span>
-        <span class="tower-cost" id="costFire"></span>
-      </button>
-      <button class="tower-chip" data-tower="frost" onclick="selectTower('frost', this)">
-        <img class="tower-icon" src="assets/towers/frost.svg" alt="">
-        <span>Hielo</span>
-        <span class="tower-cost" id="costFrost"></span>
-      </button>
-      <button class="tower-chip" data-tower="nature" onclick="selectTower('nature', this)">
-        <img class="tower-icon" src="assets/towers/nature.svg" alt="">
-        <span>Bosque</span>
-        <span class="tower-cost" id="costNature"></span>
-      </button>
+  <div id="adventureScreen" class="menu-screen" hidden>
+    <div class="menu-card">
+      <button class="menu-back" onclick="showScreen('playSelectScreen')">&larr; Volver</button>
+      <h2 class="menu-subtitle">Aventura</h2>
+      <p class="menu-hint">Mismo mapa y mismo punto de partida cada vez que juegues un nivel.</p>
+      <div id="adventureLevels" class="adventure-levels"></div>
     </div>
-    <div id="actionRow">
-      <div id="panelInfo">Toca una casilla libre para construir. Toca una torre puesta para mejorarla.</div>
-      <button class="btn-start" id="startBtn" onclick="startWave()">Iniciar Ola</button>
+  </div>
+
+  <div id="otrosScreen" class="menu-screen" hidden>
+    <div class="menu-card">
+      <button class="menu-back" onclick="showScreen('menuScreen')">&larr; Volver</button>
+      <h2 class="menu-subtitle">Otros</h2>
+      <p class="menu-hint">Rush Royale Roguelike -- fan game no oficial, hecho por diversión. Sin conexión a ningún servidor, sin anuncios, sin compras.</p>
+    </div>
+  </div>
+
+  <div id="gameScreen" hidden>
+    <div id="hud">
+      <div class="hud-item" id="hudMana"><span class="hud-icon">💧</span><span id="manaText">0</span></div>
+      <div class="hud-item" id="hudLevel">Nv <span id="levelNum">1</span> · Ola <span id="waveNum">1</span>/<span id="waveMax">3</span></div>
+      <div class="hud-item" id="hudLives"><span class="hud-icon">❤</span><span id="lives">16</span></div>
+      <div class="speed-group" id="speedGroup">
+        <button class="speed-btn selected" data-speed="1" onclick="setGameSpeed(1, this)">x1</button>
+        <button class="speed-btn" data-speed="2" onclick="setGameSpeed(2, this)">x2</button>
+        <button class="speed-btn" data-speed="4" onclick="setGameSpeed(4, this)">x4</button>
+        <button class="speed-btn" data-speed="8" onclick="setGameSpeed(8, this)">x8</button>
+        <button class="speed-btn" data-speed="16" onclick="setGameSpeed(16, this)">x16</button>
+      </div>
+    </div>
+
+    <div id="board-wrap">
+      <canvas id="gameCanvas"></canvas>
+      <div id="toast"></div>
+    </div>
+
+    <div id="controls">
+      <div class="mana-bar"><div class="mana-fill" id="manaBar"></div></div>
+      <div id="towerRow">
+        <button class="tower-chip" data-tower="fire" onclick="selectTower('fire', this)">
+          <img class="tower-icon" src="assets/towers/fire.svg" alt="">
+          <span>Fuego</span>
+          <span class="tower-cost" id="costFire"></span>
+        </button>
+        <button class="tower-chip" data-tower="frost" onclick="selectTower('frost', this)">
+          <img class="tower-icon" src="assets/towers/frost.svg" alt="">
+          <span>Hielo</span>
+          <span class="tower-cost" id="costFrost"></span>
+        </button>
+        <button class="tower-chip" data-tower="nature" onclick="selectTower('nature', this)">
+          <img class="tower-icon" src="assets/towers/nature.svg" alt="">
+          <span>Bosque</span>
+          <span class="tower-cost" id="costNature"></span>
+        </button>
+      </div>
+      <div id="actionRow">
+        <div id="panelInfo">Toca una casilla libre para construir. Toca una torre puesta para mejorarla.</div>
+        <button class="btn-start" id="startBtn" onclick="startWave()">Iniciar Ola</button>
+      </div>
     </div>
   </div>
 
@@ -362,7 +486,20 @@
     /* =========================================================
        3. GRID + PATH GENERATION
        ========================================================= */
-    function rand(a, b) { return a + Math.random() * (b - a); }
+    // rng es intercambiable: por defecto Math.random (partida aleatoria),
+    // pero el modo Aventura lo cambia temporalmente a un generador con
+    // semilla fija mientras se construye el mapa, para que cada nivel
+    // salga siempre igual. Se restaura a Math.random justo después.
+    var rng = Math.random;
+    function mulberry32(seed) {
+      return function () {
+        seed |= 0; seed = (seed + 0x6D2B79F5) | 0;
+        var t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+        t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+      };
+    }
+    function rand(a, b) { return a + rng() * (b - a); }
     function randInt(a, b) { return Math.floor(rand(a, b + 1)); }
     function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
     function key(c, r) { return c + ',' + r; }
@@ -376,9 +513,9 @@
     function chooseGridDims() {
       return {
         cols: GRID_SIZE, rows: GRID_SIZE,
-        vertical: Math.random() < 0.5,
-        reverse: Math.random() < 0.5,
-        laneCount: Math.random() < 0.5 ? 1 : 2
+        vertical: rng() < 0.5,
+        reverse: rng() < 0.5,
+        laneCount: rng() < 0.5 ? 1 : 2
       };
     }
 
@@ -431,10 +568,10 @@
         var cur = cells[cells.length - 1];
         if (primaryOf(cur) >= priLen - 1) return true;
         var primaryStep = vertical ? { row: cur.row + 1, col: cur.col } : { row: cur.row, col: cur.col + 1 };
-        var lateralDir = Math.random() < 0.5 ? -1 : 1;
+        var lateralDir = rng() < 0.5 ? -1 : 1;
         var lateralStep = vertical ? { row: cur.row, col: cur.col + lateralDir } : { row: cur.row + lateralDir, col: cur.col };
         var altLateralStep = vertical ? { row: cur.row, col: cur.col - lateralDir } : { row: cur.row - lateralDir, col: cur.col };
-        var candidates = Math.random() < lateralBias ? [lateralStep, primaryStep, altLateralStep] : [primaryStep, lateralStep, altLateralStep];
+        var candidates = rng() < lateralBias ? [lateralStep, primaryStep, altLateralStep] : [primaryStep, lateralStep, altLateralStep];
         for (var i = 0; i < candidates.length; i++) {
           var cand = candidates[i];
           if (!inBounds(cand) || occupied(cand.row, cand.col) || wouldViolateRow(cand.row, cand.col)) continue;
@@ -489,8 +626,8 @@
         var canLateralNow = pri > 0 && pri < priLen - 2;
         var straightLanding = mk(pri + 1, sec);
         var mustDivert = canLateralNow && wouldViolateRow(straightLanding.row, straightLanding.col);
-        if (canLateralNow && (mustDivert || Math.random() < lateralBias)) {
-          var dir = Math.random() < 0.5 ? -1 : 1;
+        if (canLateralNow && (mustDivert || rng() < lateralBias)) {
+          var dir = rng() < 0.5 ? -1 : 1;
           var order = [sec + dir, sec - dir];
           for (var i = 0; i < order.length; i++) {
             var next = order[i];
@@ -1082,16 +1219,65 @@
       });
     }
 
-    function init() {
-      buildGrid();
+    window.addEventListener('resize', resize);
+    window.addEventListener('orientationchange', function () { setTimeout(resize, 200); });
+
+    /* =========================================================
+       9. MENUS
+       ========================================================= */
+    var ADVENTURE_SEED_BASE = 918273;
+    var ADVENTURE_LEVELS = [
+      { level: 1, name: 'Primeros pasos' },
+      { level: 2, name: 'Calentando motores' },
+      { level: 3, name: 'A por todas' },
+      { level: 4, name: 'Presión alta' },
+      { level: 5, name: 'El gran reto' }
+    ];
+
+    window.showScreen = function (id) {
+      ['menuScreen', 'playSelectScreen', 'adventureScreen', 'otrosScreen', 'gameScreen'].forEach(function (sid) {
+        var el = document.getElementById(sid);
+        if (el) el.hidden = sid !== id;
+      });
+    };
+
+    function renderAdventureLevels() {
+      var wrap = document.getElementById('adventureLevels');
+      if (!wrap) return;
+      wrap.innerHTML = '';
+      ADVENTURE_LEVELS.forEach(function (lv) {
+        var cfg = LEVEL_CONFIGS[lv.level - 1];
+        var btn = document.createElement('button');
+        btn.className = 'adventure-level-btn';
+        btn.innerHTML =
+          '<span class="adventure-level-num">' + lv.level + '</span>' +
+          '<span class="adventure-level-text"><strong>' + lv.name + '</strong>' +
+          '<span>' + cfg.enemies + ' enemigos &middot; ' + Math.round(cfg.health) + ' vida</span></span>';
+        btn.addEventListener('click', function () { startGame({ adventure: true, level: lv.level }); });
+        wrap.appendChild(btn);
+      });
+    }
+    renderAdventureLevels();
+
+    var gameStarted = false;
+    window.startGame = function (opts) {
+      opts = opts || {};
+      showScreen('gameScreen');
+      if (opts.adventure) {
+        game.level = opts.level || 1;
+        rng = mulberry32(ADVENTURE_SEED_BASE + (opts.level || 1));
+        buildGrid();
+        rng = Math.random;
+      } else {
+        buildGrid();
+      }
       selectTower('fire', document.querySelector('.tower-chip[data-tower="fire"]'));
       updateUI();
-      window.addEventListener('resize', resize);
-      window.addEventListener('orientationchange', function () { setTimeout(resize, 200); });
-      requestAnimationFrame(tick);
-    }
-
-    init();
+      if (!gameStarted) {
+        gameStarted = true;
+        requestAnimationFrame(tick);
+      }
+    };
   })();
   </script>
 </body>
