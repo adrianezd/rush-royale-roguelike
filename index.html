@@ -1158,7 +1158,9 @@
         }
       }
 
-      game.mana = Math.min(MAX_MANA, game.mana + PASSIVE_MANA_PER_SEC * dt);
+      if (game.isWaveActive) {
+        game.mana = Math.min(MAX_MANA, game.mana + PASSIVE_MANA_PER_SEC * dt);
+      }
 
       game.towers.forEach(function (t) { t.update(dt); });
 
