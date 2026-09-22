@@ -10,7 +10,7 @@
     html, body { height: 100%; overscroll-behavior: none; }
     body {
       font-family: 'Segoe UI', Arial, sans-serif;
-      background: #12121f;
+      background: #0a0e1a;
       color: #eee;
       height: 100dvh;
       overflow: hidden;
@@ -28,9 +28,10 @@
       gap: 6px;
       row-gap: 6px;
       padding: max(8px, env(safe-area-inset-top)) 10px 8px;
-      background: #0f3460;
+      background: linear-gradient(180deg, #14213d, #0f3460);
       border-bottom: 2px solid #e94560;
       z-index: 2;
+      box-shadow: 0 3px 12px rgba(0,0,0,0.4);
     }
     .hud-item {
       display: flex;
@@ -38,20 +39,23 @@
       gap: 4px;
       font-weight: 700;
       font-size: 0.8rem;
-      background: rgba(0,0,0,0.25);
+      background: rgba(0,0,0,0.28);
       padding: 5px 9px;
       border-radius: 20px;
       white-space: nowrap;
     }
     .hud-icon { font-size: 0.95rem; line-height: 1; }
     #hudMana { color: #4ecdc4; }
-    #hudLives { color: #ff6b7a; }
+    #hudGems { color: #c9a2ff; }
+    #hudLives { color: #ff6b7a; transition: transform 0.15s; }
+    #hudLives.hit { animation: hudHit 0.3s ease; }
+    @keyframes hudHit { 0%, 100% { transform: scale(1); } 40% { transform: scale(1.25); } }
     #hudLevel { color: #ffd166; }
 
     .speed-group {
       display: flex;
       gap: 2px;
-      background: rgba(0,0,0,0.25);
+      background: rgba(0,0,0,0.28);
       padding: 3px;
       border-radius: 20px;
       order: 10;
@@ -78,10 +82,30 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      background: #0a0e1a;
+      background: radial-gradient(circle at 50% 30%, #10182a, #060a12 80%);
       position: relative;
     }
     canvas { display: block; touch-action: none; }
+
+    #bossBar {
+      position: absolute;
+      top: 8px; left: 50%; transform: translateX(-50%);
+      width: min(320px, 88%);
+      background: rgba(10,14,26,0.85);
+      border: 1.5px solid #ff5c8a;
+      border-radius: 10px;
+      padding: 5px 10px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-align: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s;
+      z-index: 3;
+    }
+    #bossBar.show { opacity: 1; }
+    #bossBar .bar { height: 8px; background: #240015; border-radius: 6px; overflow: hidden; margin-top: 3px; }
+    #bossBar .fill { height: 100%; background: linear-gradient(90deg, #ff5c8a, #ff2e63); width: 100%; transition: width 0.2s; }
 
     #toast {
       position: absolute;
@@ -102,13 +126,41 @@
       max-width: 90%;
       overflow: hidden;
       text-overflow: ellipsis;
+      z-index: 4;
     }
     #toast.show { opacity: 1; transform: translateX(-50%) translateY(4px); }
 
-    /* ---------- Controls (bottom on mobile, side on wide screens) ---------- */
+    #bigBanner {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+      z-index: 5;
+    }
+    #bigBanner span {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      font-size: clamp(1.6rem, 8vw, 2.6rem);
+      font-weight: 900;
+      color: #fff;
+      text-shadow: 0 0 18px rgba(233,69,96,0.9), 0 3px 6px rgba(0,0,0,0.7);
+      opacity: 0;
+      transform: scale(0.6);
+    }
+    #bigBanner span.show { animation: bannerPop 1.6s cubic-bezier(0.2, 1, 0.3, 1) forwards; }
+    @keyframes bannerPop {
+      0% { opacity: 0; transform: scale(0.5); }
+      15% { opacity: 1; transform: scale(1.08); }
+      25% { transform: scale(1); }
+      80% { opacity: 1; }
+      100% { opacity: 0; transform: scale(1); }
+    }
+
+    /* ---------- Controls ---------- */
     #controls {
       flex: 0 0 auto;
-      background: #0f3460;
+      background: linear-gradient(0deg, #14213d, #0f3460);
       border-top: 2px solid #e94560;
       padding: 8px 10px max(8px, env(safe-area-inset-bottom));
       display: flex;
@@ -134,29 +186,42 @@
     }
 
     #towerRow {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 8px;
+      display: flex;
+      gap: 7px;
+      overflow-x: auto;
+      overflow-y: hidden;
+      padding-bottom: 2px;
+      scrollbar-width: none;
     }
+    #towerRow::-webkit-scrollbar { display: none; }
     .tower-chip {
+      flex: 0 0 auto;
+      width: 62px;
       display: flex;
       flex-direction: column;
       align-items: center;
       gap: 3px;
-      padding: 8px 4px;
+      padding: 7px 3px 6px;
       background: #16213e;
       border: 2px solid rgba(233, 69, 96, 0.5);
       color: #eee;
       border-radius: 10px;
       cursor: pointer;
-      font-size: 0.72rem;
+      font-size: 0.62rem;
       font-weight: 600;
-      transition: all 0.15s;
+      transition: transform 0.12s, border-color 0.12s, background 0.12s;
     }
     .tower-chip:active { transform: scale(0.95); }
     .tower-chip.selected { background: #e94560; border-color: #ff8fa3; color: #1a1a2e; }
-    .tower-icon { width: 30px; height: 30px; object-fit: contain; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.4)); }
-    .tower-cost { font-size: 0.66rem; opacity: 0.85; }
+    .tower-chip.locked { opacity: 0.4; }
+    .tower-icon-wrap {
+      width: 32px; height: 32px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.05rem;
+      box-shadow: inset 0 -3px 5px rgba(0,0,0,0.35), inset 0 2px 3px rgba(255,255,255,0.25), 0 2px 4px rgba(0,0,0,0.5);
+      border: 2px solid rgba(255,255,255,0.4);
+    }
+    .tower-cost { font-size: 0.6rem; opacity: 0.9; }
 
     #actionRow {
       display: flex;
@@ -174,21 +239,35 @@
     }
     #panelInfo b { color: #4ecdc4; }
     #panelInfo .warn { color: #ffb454; }
+    #panelInfo .sell { color: #ff8fa3; }
 
     .btn-start {
       flex: 0 0 auto;
       padding: 10px 18px;
-      background: #e94560;
-      color: #1a1a2e;
+      background: linear-gradient(135deg, #e94560, #c92c48);
+      color: #fff;
       border: none;
       border-radius: 8px;
       font-size: 0.85rem;
       font-weight: 700;
       cursor: pointer;
       white-space: nowrap;
+      box-shadow: 0 3px 8px rgba(233,69,96,0.4);
     }
     .btn-start:active { transform: scale(0.96); }
-    .btn-start:disabled { background: #555; color: #999; cursor: not-allowed; }
+    .btn-start:disabled { background: #444; color: #888; cursor: not-allowed; box-shadow: none; }
+
+    .mini-btn {
+      padding: 3px 9px;
+      border-radius: 7px;
+      border: none;
+      font-weight: 700;
+      font-size: 0.68rem;
+      cursor: pointer;
+      margin-left: 5px;
+    }
+    .mini-btn.upgrade { background: #4ecdc4; color: #0a0e1a; }
+    .mini-btn.sell { background: #ff5c7a; color: #1a1a2e; }
 
     /* ---------- Menus ---------- */
     .menu-screen {
@@ -197,14 +276,15 @@
       align-items: center;
       justify-content: center;
       padding: 24px 20px max(24px, env(safe-area-inset-bottom));
-      background: radial-gradient(circle at 50% 20%, #16213e, #0a0e1a 75%);
+      background: radial-gradient(circle at 50% 15%, #1c2c52, #0a0e1a 72%);
+      overflow-y: auto;
     }
     .menu-card {
       width: 100%;
-      max-width: 360px;
+      max-width: 380px;
       display: flex;
       flex-direction: column;
-      gap: 14px;
+      gap: 12px;
       position: relative;
     }
     .menu-title {
@@ -213,17 +293,28 @@
       font-weight: 800;
       color: #eee;
       line-height: 1.15;
-      margin-bottom: 12px;
-      text-shadow: 0 2px 10px rgba(233,69,96,0.4);
+      margin-bottom: 8px;
+      text-shadow: 0 2px 14px rgba(233,69,96,0.5);
     }
     .menu-title span { color: #e94560; }
     .menu-subtitle { text-align: center; font-size: 1.3rem; font-weight: 700; margin-bottom: 4px; }
     .menu-hint { text-align: center; font-size: 0.82rem; color: #9aa4b8; margin-bottom: 4px; line-height: 1.5; }
+    .menu-gems {
+      align-self: center;
+      display: flex; align-items: center; gap: 6px;
+      background: rgba(201,162,255,0.14);
+      border: 1.5px solid rgba(201,162,255,0.5);
+      color: #c9a2ff;
+      font-weight: 700; font-size: 0.85rem;
+      padding: 5px 14px;
+      border-radius: 20px;
+      margin-bottom: 4px;
+    }
     .menu-btn {
       padding: 16px 18px;
       border-radius: 14px;
       border: 2px solid rgba(233,69,96,0.5);
-      background: #16213e;
+      background: linear-gradient(160deg, #1c2c4e, #16213e);
       color: #eee;
       font-size: 1.05rem;
       font-weight: 700;
@@ -236,7 +327,7 @@
     }
     .menu-btn:active { transform: scale(0.97); }
     .menu-btn small { font-size: 0.72rem; font-weight: 500; opacity: 0.75; }
-    .menu-btn-primary { background: #e94560; border-color: #ff8fa3; color: #1a1a2e; }
+    .menu-btn-primary { background: linear-gradient(135deg, #e94560, #c92c48); border-color: #ff8fa3; color: #fff; }
     .menu-back {
       align-self: flex-start;
       background: none;
@@ -278,6 +369,56 @@
     .adventure-level-text strong { font-size: 0.95rem; }
     .adventure-level-text span { font-size: 0.74rem; color: #9aa4b8; }
 
+    /* ---------- Tienda de mejoras (Mejoras) ---------- */
+    .upgrade-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 14px;
+      border-radius: 12px;
+      border: 2px solid rgba(201,162,255,0.35);
+      background: #16213e;
+    }
+    .upgrade-item .ic { font-size: 1.5rem; flex-shrink: 0; width: 32px; text-align: center; }
+    .upgrade-item .info { flex: 1; min-width: 0; }
+    .upgrade-item .info strong { display: block; font-size: 0.9rem; }
+    .upgrade-item .info span { font-size: 0.72rem; color: #9aa4b8; }
+    .upgrade-item button {
+      flex-shrink: 0;
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: none;
+      font-weight: 700;
+      font-size: 0.76rem;
+      cursor: pointer;
+      background: #c9a2ff;
+      color: #1a1a2e;
+      white-space: nowrap;
+    }
+    .upgrade-item button:disabled { background: #444; color: #888; cursor: not-allowed; }
+    .upgrade-item.maxed button { background: #33c17d; }
+
+    /* ---------- End-run overlay ---------- */
+    #endOverlay {
+      position: fixed; inset: 0; z-index: 20;
+      background: rgba(6,8,14,0.86);
+      display: flex; align-items: center; justify-content: center;
+      padding: 20px;
+    }
+    .end-card {
+      width: 100%; max-width: 340px;
+      background: linear-gradient(165deg, #1c2c52, #101a30);
+      border: 2px solid #e94560;
+      border-radius: 16px;
+      padding: 22px 20px;
+      text-align: center;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.6);
+    }
+    .end-card h2 { font-size: 1.4rem; margin-bottom: 6px; }
+    .end-card p { font-size: 0.82rem; color: #b8c1d1; margin-bottom: 4px; }
+    .end-card .gem-line { color: #c9a2ff; font-weight: 700; font-size: 1rem; margin: 10px 0; }
+    .end-card .menu-btn { margin-top: 12px; }
+
     /* ---------- Wide screens: side-by-side layout ---------- */
     @media (min-width: 780px) and (min-height: 500px) {
       #gameScreen { flex-direction: row; }
@@ -295,13 +436,13 @@
       #board-wrap { order: 2; }
       #controls {
         order: 3;
-        width: 260px;
+        width: 270px;
         border-top: none;
         border-left: 2px solid #e94560;
         justify-content: flex-start;
       }
-      #towerRow { grid-template-columns: 1fr; }
-      .tower-chip { flex-direction: row; justify-content: flex-start; padding: 10px; }
+      #towerRow { flex-wrap: wrap; overflow: visible; }
+      .tower-chip { width: 76px; }
       #actionRow { flex-direction: column; }
     }
   </style>
@@ -310,7 +451,9 @@
   <div id="menuScreen" class="menu-screen">
     <div class="menu-card">
       <h1 class="menu-title">Rush Royale<br><span>Roguelike</span></h1>
+      <div class="menu-gems">💎 <span id="menuGems">0</span> gemas</div>
       <button class="menu-btn menu-btn-primary" onclick="showScreen('playSelectScreen')">Empezar</button>
+      <button class="menu-btn" onclick="showScreen('upgradeShopScreen'); renderUpgradeShop();">Mejoras permanentes<small>Gasta tus gemas</small></button>
       <button class="menu-btn" onclick="showScreen('otrosScreen')">Otros</button>
     </div>
   </div>
@@ -320,7 +463,7 @@
       <button class="menu-back" onclick="showScreen('menuScreen')">&larr; Volver</button>
       <h2 class="menu-subtitle">Elige modo</h2>
       <button class="menu-btn menu-btn-primary" onclick="startGame({ adventure: false })">Partida aleatoria<small>Mapa nuevo cada vez</small></button>
-      <button class="menu-btn" onclick="showScreen('adventureScreen')">Aventura<small>5 niveles fijos</small></button>
+      <button class="menu-btn" onclick="showScreen('adventureScreen')">Aventura<small>8 niveles fijos</small></button>
     </div>
   </div>
 
@@ -333,17 +476,29 @@
     </div>
   </div>
 
+  <div id="upgradeShopScreen" class="menu-screen" hidden>
+    <div class="menu-card">
+      <button class="menu-back" onclick="showScreen('menuScreen')">&larr; Volver</button>
+      <h2 class="menu-subtitle">Mejoras permanentes</h2>
+      <div class="menu-gems">💎 <span id="shopGems">0</span> gemas</div>
+      <p class="menu-hint">Ganas gemas al terminar cada partida (más cuanto más lejos llegues). Las mejoras se aplican a todas las partidas futuras.</p>
+      <div id="upgradeList" style="display:flex;flex-direction:column;gap:10px"></div>
+    </div>
+  </div>
+
   <div id="otrosScreen" class="menu-screen" hidden>
     <div class="menu-card">
       <button class="menu-back" onclick="showScreen('menuScreen')">&larr; Volver</button>
       <h2 class="menu-subtitle">Otros</h2>
       <p class="menu-hint">Rush Royale Roguelike -- fan game no oficial, hecho por diversión. Sin conexión a ningún servidor, sin anuncios, sin compras.</p>
+      <button class="menu-btn" onclick="if(confirm('¿Borrar gemas y mejoras permanentes?')){resetMeta();}">Borrar progreso permanente</button>
     </div>
   </div>
 
   <div id="gameScreen" hidden>
     <div id="hud">
       <div class="hud-item" id="hudMana"><span class="hud-icon">💧</span><span id="manaText">0</span></div>
+      <div class="hud-item" id="hudGems">💎 <span id="runGems">0</span></div>
       <div class="hud-item" id="hudLevel">Nv <span id="levelNum">1</span> · Ola <span id="waveNum">1</span>/<span id="waveMax">3</span></div>
       <div class="hud-item" id="hudLives"><span class="hud-icon">❤</span><span id="lives">16</span></div>
       <div class="speed-group" id="speedGroup">
@@ -351,38 +506,32 @@
         <button class="speed-btn" data-speed="2" onclick="setGameSpeed(2, this)">x2</button>
         <button class="speed-btn" data-speed="4" onclick="setGameSpeed(4, this)">x4</button>
         <button class="speed-btn" data-speed="8" onclick="setGameSpeed(8, this)">x8</button>
-        <button class="speed-btn" data-speed="16" onclick="setGameSpeed(16, this)">x16</button>
       </div>
     </div>
 
     <div id="board-wrap">
       <canvas id="gameCanvas"></canvas>
+      <div id="bossBar"><span id="bossName">Jefe</span><div class="bar"><div class="fill" id="bossFill"></div></div></div>
       <div id="toast"></div>
+      <div id="bigBanner"><span id="bigBannerText"></span></div>
     </div>
 
     <div id="controls">
       <div class="mana-bar"><div class="mana-fill" id="manaBar"></div></div>
-      <div id="towerRow">
-        <button class="tower-chip" data-tower="fire" onclick="selectTower('fire', this)">
-          <img class="tower-icon" src="assets/towers/fire.svg" alt="">
-          <span>Fuego</span>
-          <span class="tower-cost" id="costFire"></span>
-        </button>
-        <button class="tower-chip" data-tower="frost" onclick="selectTower('frost', this)">
-          <img class="tower-icon" src="assets/towers/frost.svg" alt="">
-          <span>Hielo</span>
-          <span class="tower-cost" id="costFrost"></span>
-        </button>
-        <button class="tower-chip" data-tower="nature" onclick="selectTower('nature', this)">
-          <img class="tower-icon" src="assets/towers/nature.svg" alt="">
-          <span>Bosque</span>
-          <span class="tower-cost" id="costNature"></span>
-        </button>
-      </div>
+      <div id="towerRow"></div>
       <div id="actionRow">
         <div id="panelInfo">Toca una casilla libre para construir. Toca una torre puesta para mejorarla.</div>
         <button class="btn-start" id="startBtn" onclick="startWave()">Iniciar Ola</button>
       </div>
+    </div>
+  </div>
+
+  <div id="endOverlay" hidden>
+    <div class="end-card">
+      <h2 id="endTitle">Fin de la partida</h2>
+      <p id="endDesc"></p>
+      <div class="gem-line">💎 +<span id="endGems">0</span> gemas ganadas</div>
+      <button class="menu-btn menu-btn-primary" onclick="location.reload()">Volver al menú</button>
     </div>
   </div>
 
@@ -391,67 +540,149 @@
     'use strict';
 
     /* =========================================================
-       1. CONFIG
+       0. META-PROGRESIÓN (gemas + mejoras permanentes, localStorage)
        ========================================================= */
-    var TOWER_TYPES = {
-      fire:   { name: 'Fuego',   color: '#e94560', damage: 15, rangeTiles: 2.3, speed: 1.0, manaCost: 45, desc: 'Daño directo alto.', icon: 'assets/towers/fire.svg' },
-      frost:  { name: 'Hielo',   color: '#4ecdc4', damage: 7,  rangeTiles: 2.0, speed: 0.9, manaCost: 38, desc: 'Ralentiza al enemigo.', icon: 'assets/towers/frost.svg' },
-      nature: { name: 'Bosque',  color: '#44b78b', damage: 10, rangeTiles: 3.0, speed: 1.15, manaCost: 52, desc: 'Alcance largo.', icon: 'assets/towers/nature.svg' }
-    };
-
-    var towerIconImages = {};
-    Object.keys(TOWER_TYPES).forEach(function (key) {
-      var img = new Image();
-      img.src = TOWER_TYPES[key].icon;
-      towerIconImages[key] = img;
-    });
-
-    var ENEMY_SPRITES = {
-      slime:  'assets/enemies/slime.svg',
-      goblin: 'assets/enemies/goblin.svg',
-      brute:  'assets/enemies/brute.svg'
-    };
-    var enemyIconImages = {};
-    Object.keys(ENEMY_SPRITES).forEach(function (key) {
-      var img = new Image();
-      img.src = ENEMY_SPRITES[key];
-      enemyIconImages[key] = img;
-    });
-    function enemySpriteForLevel(level) {
-      if (level <= 2) return 'slime';
-      if (level <= 4) return 'goblin';
-      return 'brute';
+    var META_KEY = 'rushRoyaleRogue_meta_v1';
+    var UPGRADE_DEFS = [
+      { id: 'mana', icon: '💧', name: 'Maná inicial', desc: '+15 maná al empezar cada partida', maxLevel: 5, cost: function (lv) { return 3 + lv * 3; } },
+      { id: 'lives', icon: '❤️', name: 'Vidas extra', desc: '+2 vidas al empezar cada partida', maxLevel: 5, cost: function (lv) { return 3 + lv * 3; } },
+      { id: 'regen', icon: '✨', name: 'Regeneración de maná', desc: '+0.6 maná/seg mientras hay una ola en marcha', maxLevel: 5, cost: function (lv) { return 4 + lv * 4; } },
+      { id: 'gems', icon: '💎', name: 'Buscador de gemas', desc: '+10% gemas ganadas al terminar la partida', maxLevel: 5, cost: function (lv) { return 4 + lv * 4; } }
+    ];
+    function loadMeta() {
+      try {
+        var raw = localStorage.getItem(META_KEY);
+        if (!raw) throw 0;
+        var d = JSON.parse(raw);
+        return { gems: d.gems || 0, upgrades: d.upgrades || {} };
+      } catch (e) { return { gems: 0, upgrades: {} }; }
     }
+    function saveMeta() { try { localStorage.setItem(META_KEY, JSON.stringify(meta)); } catch (e) {} }
+    var meta = loadMeta();
+    window.resetMeta = function () { meta = { gems: 0, upgrades: {} }; saveMeta(); renderUpgradeShop(); refreshGemCounters(); };
+    function metaUpgradeLevel(id) { return meta.upgrades[id] || 0; }
+    function refreshGemCounters() {
+      ['menuGems', 'shopGems'].forEach(function (id) {
+        var el = document.getElementById(id);
+        if (el) el.textContent = meta.gems;
+      });
+    }
+    refreshGemCounters();
 
-    // Progresión más larga y más dura: 8 niveles en vez de 5, con la salud
-    // y la velocidad subiendo más deprisa hacia el final -- antes el juego
-    // se acababa ("¡Victoria!") justo cuando empezaba a apretar de verdad.
+    window.renderUpgradeShop = function () {
+      var wrap = document.getElementById('upgradeList');
+      wrap.innerHTML = '';
+      UPGRADE_DEFS.forEach(function (def) {
+        var lv = metaUpgradeLevel(def.id);
+        var maxed = lv >= def.maxLevel;
+        var cost = maxed ? 0 : def.cost(lv);
+        var div = document.createElement('div');
+        div.className = 'upgrade-item' + (maxed ? ' maxed' : '');
+        div.innerHTML =
+          '<div class="ic">' + def.icon + '</div>' +
+          '<div class="info"><strong>' + def.name + ' (' + lv + '/' + def.maxLevel + ')</strong><span>' + def.desc + '</span></div>' +
+          '<button ' + (maxed || meta.gems < cost ? 'disabled' : '') + ' onclick="buyUpgrade(\'' + def.id + '\')">' + (maxed ? 'Máx' : cost + ' 💎') + '</button>';
+        wrap.appendChild(div);
+      });
+    };
+    window.buyUpgrade = function (id) {
+      var def = UPGRADE_DEFS.find(function (d) { return d.id === id; });
+      var lv = metaUpgradeLevel(id);
+      if (!def || lv >= def.maxLevel) return;
+      var cost = def.cost(lv);
+      if (meta.gems < cost) return;
+      meta.gems -= cost;
+      meta.upgrades[id] = lv + 1;
+      saveMeta();
+      refreshGemCounters();
+      renderUpgradeShop();
+    };
+
+    /* =========================================================
+       1. CONFIG: TORRES
+       ========================================================= */
+    // 6 torres con roles distintos de verdad, no solo estadísticas
+    // distintas: splash (área), cadena (rebota entre varios), veneno
+    // (daño sostenido que se acumula), francotirador (mucho daño, muy
+    // lento) y las 3 clásicas. antiAir: true = puede alcanzar a los
+    // enemigos voladores (el resto de torres los ignora del todo, para
+    // que de verdad haga falta variar el arsenal).
+    var TOWER_TYPES = {
+      fire: {
+        name: 'Fuego', symbol: '🔥', color: '#ff5b3c', color2: '#ffb020',
+        damage: 15, rangeTiles: 2.3, speed: 1.0, manaCost: 45,
+        desc: 'Daño directo alto y fiable.', antiAir: false, shape: 'fire'
+      },
+      frost: {
+        name: 'Hielo', symbol: '❄️', color: '#4ecdc4', color2: '#8fe9ff',
+        damage: 7, rangeTiles: 2.0, speed: 0.9, manaCost: 38,
+        desc: 'Daño bajo, pero ralentiza al enemigo.', antiAir: false, shape: 'frost'
+      },
+      nature: {
+        name: 'Bosque', symbol: '🌿', color: '#44b78b', color2: '#8ee6b0',
+        damage: 10, rangeTiles: 3.2, speed: 1.15, manaCost: 52,
+        desc: 'Alcance muy largo. Alcanza a voladores.', antiAir: true, shape: 'nature'
+      },
+      electric: {
+        name: 'Rayo', symbol: '⚡', color: '#7c5cff', color2: '#ffe97c',
+        damage: 9, rangeTiles: 2.4, speed: 1.3, manaCost: 60,
+        desc: 'Rebota entre hasta 3 enemigos. Alcanza a voladores.', antiAir: true, shape: 'electric', chain: 3
+      },
+      venom: {
+        name: 'Veneno', symbol: '☠️', color: '#8b3fb5', color2: '#5cff9e',
+        damage: 4, rangeTiles: 2.1, speed: 1.05, manaCost: 55,
+        desc: 'Envenena: el daño se acumula con el tiempo.', antiAir: false, shape: 'venom', poison: true
+      },
+      sniper: {
+        name: 'Francotirador', symbol: '🎯', color: '#2c3e6b', color2: '#e94560',
+        damage: 55, rangeTiles: 4.2, speed: 0.35, manaCost: 70,
+        desc: 'Muy lento, pero pega muy fuerte a distancia.', antiAir: false, shape: 'sniper'
+      }
+    };
+    var TOWER_ORDER = ['fire', 'frost', 'nature', 'electric', 'venom', 'sniper'];
+    // Se desbloquean progresivamente (nivel de partida en el que aparecen
+    // en la barra), para no abrumar con 6 torres desde el primer segundo.
+    var TOWER_UNLOCK_LEVEL = { fire: 1, frost: 1, nature: 2, electric: 3, venom: 4, sniper: 5 };
+
+    /* =========================================================
+       CONFIG: ENEMIGOS
+       ========================================================= */
+    // Cada tipo tiene su función visual y táctica: tank (mucha vida,
+    // lento), fast (poca vida, muy rápido), flying (solo antiAir puede
+    // tocarlo), healer (cura a los que tiene cerca), armored (reduce el
+    // daño físico plano que recibe).
+    var ENEMY_TYPES = {
+      slime:   { name: 'Gelatina', shape: 'slime',   color: '#3ea6ff', healthMult: 1.0,  speedMult: 1.0,  flying: false, armor: 0,   healAura: 0, minLevel: 1 },
+      goblin:  { name: 'Trasgo',   shape: 'goblin',  color: '#5fbf5f', healthMult: 0.85, speedMult: 1.2,  flying: false, armor: 0,   healAura: 0, minLevel: 1 },
+      brute:   { name: 'Bruto',    shape: 'brute',   color: '#c9622b', healthMult: 1.9,  speedMult: 0.75, flying: false, armor: 0.3, healAura: 0, minLevel: 2 },
+      bat:     { name: 'Murciélago', shape: 'bat',   color: '#b57bff', healthMult: 0.55, speedMult: 1.6,  flying: true,  armor: 0,   healAura: 0, minLevel: 3 },
+      healer:  { name: 'Curandero', shape: 'healer', color: '#5cff9e', healthMult: 1.1,  speedMult: 0.9,  flying: false, armor: 0,   healAura: 5, minLevel: 4 },
+      boss:    { name: 'Jefe',     shape: 'boss',    color: '#ff2e63', healthMult: 9,    speedMult: 0.7,  flying: false, armor: 0.15, healAura: 0, minLevel: 1 }
+    };
+
+    // Progresión: 8 niveles, con más variedad de enemigos cuanto más
+    // avanzas (weightedMix). La última ola de cada nivel añade siempre 1
+    // jefe (bossHealth = cfg.health * ENEMY_TYPES.boss.healthMult).
     var LEVEL_CONFIGS = [
-      { enemies: 8,  health: 31,  speed: 1.0,  reward: 9,  spawnMs: 900 },
-      { enemies: 11, health: 45,  speed: 1.15, reward: 10, spawnMs: 820 },
-      { enemies: 14, health: 62,  speed: 1.3,  reward: 11, spawnMs: 760 },
-      { enemies: 18, health: 84,  speed: 1.5,  reward: 12, spawnMs: 690 },
-      { enemies: 22, health: 112, speed: 1.7,  reward: 13, spawnMs: 620 },
-      { enemies: 26, health: 145, speed: 1.85, reward: 15, spawnMs: 560 },
-      { enemies: 30, health: 185, speed: 2.0,  reward: 17, spawnMs: 510 },
-      { enemies: 34, health: 230, speed: 2.15, reward: 20, spawnMs: 470 }
+      { enemies: 8,  health: 31,  speed: 1.0,  reward: 9,  spawnMs: 900, mix: ['slime'] },
+      { enemies: 11, health: 45,  speed: 1.15, reward: 10, spawnMs: 820, mix: ['slime', 'goblin'] },
+      { enemies: 14, health: 62,  speed: 1.3,  reward: 11, spawnMs: 760, mix: ['slime', 'goblin', 'brute'] },
+      { enemies: 18, health: 84,  speed: 1.5,  reward: 12, spawnMs: 690, mix: ['goblin', 'brute', 'bat'] },
+      { enemies: 22, health: 112, speed: 1.7,  reward: 13, spawnMs: 620, mix: ['goblin', 'brute', 'bat', 'healer'] },
+      { enemies: 26, health: 145, speed: 1.85, reward: 15, spawnMs: 560, mix: ['brute', 'bat', 'healer'] },
+      { enemies: 30, health: 185, speed: 2.0,  reward: 17, spawnMs: 510, mix: ['brute', 'bat', 'healer', 'goblin'] },
+      { enemies: 34, health: 230, speed: 2.15, reward: 20, spawnMs: 470, mix: ['brute', 'bat', 'healer'] }
     ];
 
-    // Élite: 1 de cada ELITE_EVERY enemigos de la oleada sale reforzado
-    // (más vida y algo más rápido), con un aro dorado para que se note a
-    // simple vista cuál conviene priorizar.
     var ELITE_EVERY = 6;
     var ELITE_HEALTH_MULT = 1.9;
     var ELITE_SPEED_MULT = 1.15;
-
-    // Con 2 carriles a la vez, repartir la MISMA cantidad de enemigos entre
-    // ambos los hacía más fáciles de defender (menos presión por carril) --
-    // así que con 2 carriles se manda más cantidad total, no la misma.
     var TWO_LANE_ENEMY_MULT = 1.4;
 
     var PASSIVE_MANA_PER_SEC = 4;
     var START_MANA = 55;
     var MAX_MANA = 150;
+    var START_LIVES = 16;
     var gameSpeed = 1;
     window.setGameSpeed = function (mult, btnEl) {
       gameSpeed = mult;
@@ -470,26 +701,27 @@
       level: 1,
       wave: 1,
       maxWaves: 3,
-      lives: 16,
+      lives: START_LIVES,
       mana: START_MANA,
+      runGems: 0,
       selectedTower: 'fire',
       selectedPlacedTower: null,
       towers: [],
       enemies: [],
+      particles: [],
+      shots: [],
       isWaveActive: false,
       enemiesToSpawn: 0,
-      enemiesSpawnedThisWave: 0
+      enemiesSpawnedThisWave: 0,
+      bossSpawnedThisWave: false,
+      ended: false
     };
 
-    var grid = null; // { cols, rows, vertical, tileSize, offsetX, offsetY, pathSet, decor, waypoints }
+    var grid = null;
 
     /* =========================================================
-       3. GRID + PATH GENERATION
+       3. GRID + PATH GENERATION (sin cambios de fondo)
        ========================================================= */
-    // rng es intercambiable: por defecto Math.random (partida aleatoria),
-    // pero el modo Aventura lo cambia temporalmente a un generador con
-    // semilla fija mientras se construye el mapa, para que cada nivel
-    // salga siempre igual. Se restaura a Math.random justo después.
     var rng = Math.random;
     function mulberry32(seed) {
       return function () {
@@ -504,11 +736,6 @@
     function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
     function key(c, r) { return c + ',' + r; }
 
-    // Tamaño de tablero FIJO: el mapa tiene que verse igual de "grande"
-    // (mismo nº de casillas) en móvil que en el resto de pantallas -- solo
-    // cambia el tamaño en píxeles de cada casilla para encajar en el hueco
-    // disponible (letterboxing ya soportado por layoutGrid), nunca el
-    // número de filas/columnas.
     var GRID_SIZE = 9;
     function chooseGridDims() {
       return {
@@ -519,28 +746,11 @@
       };
     }
 
-    // Camino de 1 celda de ancho de verdad: nunca hay 3 o más casillas
-    // seguidas en la misma fila, nunca se revisita una celda, y es un
-    // paseo realmente conectado (solo vecinos, nunca en diagonal). Se
-    // resuelve con backtracking real: probar y deshacer hasta encontrar un
-    // camino válido, no solo "seguir y esperar que cuele" -- con eso se
-    // quedaba corto o dejaba camino roto. La entrada/salida de 1 sola
-    // casilla se fuerza aparte (ver trimSingleCellEntrance): meterlo como
-    // regla DENTRO de esta búsqueda reduce demasiado las ramas válidas y
-    // el backtracking falla mucho más a menudo.
-    // lateralBias sube la probabilidad de girar en cada paso (además de los
-    // giros obligatorios por la regla de fila): con más giros el camino se
-    // alarga y recorre más tablero en vez de ir casi en línea recta de un
-    // borde al otro. preOccupied (opcional) son celdas de OTRO camino ya
-    // colocado -- se tratan como ocupadas desde el principio, así el
-    // segundo carril nunca las pisa y tampoco deja 3 en fila entre los dos.
     function generatePathAttempt(cols, rows, vertical, nodeCap, lateralBias, preOccupied) {
       var priLen = vertical ? rows : cols;
       var secLen = vertical ? cols : rows;
       var pathSet = {};
-      if (preOccupied) {
-        for (var k in preOccupied) pathSet[k] = true;
-      }
+      if (preOccupied) { for (var k in preOccupied) pathSet[k] = true; }
       function keyOf(row, col) { return row + ',' + col; }
       function occupied(row, col) { return !!pathSet[keyOf(row, col)]; }
       function inBounds(cell) {
@@ -586,30 +796,18 @@
       return { cells: cells, ok: step() };
     }
 
-    // La salida ya sale sola con 1 celda (en cuanto pri llega al final la
-    // búsqueda para ahí mismo, sin más giros). La entrada puede salir con 2
-    // si el primer paso fue un giro lateral en vez de recto: en ese caso se
-    // quita la primera celda -- la segunda pasa a ser la entrada y sigue
-    // conectada igual con el resto del camino.
     function trimSingleCellEntrance(cells, vertical) {
       function primaryOf(c) { return vertical ? c.row : c.col; }
       if (cells.length >= 2 && primaryOf(cells[0]) === primaryOf(cells[1])) return cells.slice(1);
       return cells;
     }
 
-    // Red de seguridad: si ninguno de los intentos con backtracking cuaja
-    // (no debería pasar casi nunca con un tablero cuadrado fijo pequeño),
-    // genera igualmente un camino conectado y con entrada/salida de 1 sola
-    // casilla sin backtracking, aceptando muy excepcionalmente alguna fila
-    // de 3 en vez de dejar el camino roto o a medias.
     function generatePathFallback(cols, rows, vertical, lateralBias, preOccupied) {
       var priLen = vertical ? rows : cols;
       var secLen = vertical ? cols : rows;
       function mk(p, s) { return vertical ? { col: s, row: p } : { col: p, row: s }; }
       var pathSet = {};
-      if (preOccupied) {
-        for (var k in preOccupied) pathSet[k] = true;
-      }
+      if (preOccupied) { for (var k in preOccupied) pathSet[k] = true; }
       function keyOf(row, col) { return row + ',' + col; }
       function occupied(row, col) { return !!pathSet[keyOf(row, col)]; }
       function wouldViolateRow(row, col) {
@@ -648,9 +846,6 @@
       return cells;
     }
 
-    // 0.72 en vez del 0.4 original: gira mucho más a menudo, así el camino
-    // serpentea más y recorre bastante más tablero en vez de ir casi recto
-    // de un lado al otro.
     var PATH_LATERAL_BIAS = 0.72;
 
     function generatePathCells(cols, rows, vertical, preOccupied) {
@@ -661,9 +856,6 @@
       return generatePathFallback(cols, rows, vertical, PATH_LATERAL_BIAS, preOccupied);
     }
 
-    // 1 o 2 carriles independientes: el segundo (si toca) se genera
-    // evitando por completo las casillas del primero, así nunca se pisan ni
-    // dejan 3 en fila entre ambos.
     function generateLanes(cols, rows, vertical, laneCount) {
       var lane1 = generatePathCells(cols, rows, vertical);
       if (laneCount < 2) return [lane1];
@@ -699,7 +891,7 @@
               r: 0.05 + seededRand(seed + i * 7.3) * 0.06
             });
           }
-          decor.push({ col: c, row: r, isPath: isPath, variant: Math.round(seededRand(seed)) , dots: dots });
+          decor.push({ col: c, row: r, isPath: isPath, variant: Math.round(seededRand(seed)), dots: dots });
         }
       }
 
@@ -765,27 +957,77 @@
     }
 
     /* =========================================================
-       4. ENTITIES
+       4. PARTÍCULAS (chispazos de impacto y muerte)
        ========================================================= */
-    function Enemy(level, laneIndex, isElite) {
+    function spawnParticles(x, y, color, count, speedMax) {
+      for (var i = 0; i < count; i++) {
+        var ang = Math.random() * Math.PI * 2;
+        var spd = 30 + Math.random() * (speedMax || 90);
+        game.particles.push({
+          x: x, y: y, vx: Math.cos(ang) * spd, vy: Math.sin(ang) * spd,
+          life: 0.35 + Math.random() * 0.25, maxLife: 0.6, color: color,
+          r: 1.5 + Math.random() * 2
+        });
+      }
+    }
+    function updateParticles(dt) {
+      game.particles = game.particles.filter(function (p) {
+        p.life -= dt;
+        if (p.life <= 0) return false;
+        p.x += p.vx * dt; p.y += p.vy * dt;
+        p.vx *= 0.9; p.vy *= 0.9;
+        return true;
+      });
+    }
+    function drawParticles() {
+      game.particles.forEach(function (p) {
+        ctx.globalAlpha = clamp(p.life / p.maxLife, 0, 1);
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      ctx.globalAlpha = 1;
+    }
+
+    /* =========================================================
+       5. ENTIDADES: ENEMIGO
+       ========================================================= */
+    function pickEnemyType(level, cfg) {
+      var pool = cfg.mix.filter(function (id) { return ENEMY_TYPES[id].minLevel <= level; });
+      if (!pool.length) pool = ['slime'];
+      return pool[Math.floor(rng() * pool.length)];
+    }
+
+    function Enemy(level, laneIndex, isElite, forcedType) {
       var cfg = LEVEL_CONFIGS[level - 1];
+      var typeId = forcedType || pickEnemyType(level, cfg);
+      var def = ENEMY_TYPES[typeId];
+      this.typeId = typeId;
+      this.def = def;
       this.laneIndex = laneIndex || 0;
-      this.isElite = !!isElite;
+      this.isElite = !!isElite && typeId !== 'boss';
+      this.isBoss = typeId === 'boss';
       this.segIndex = 0;
       this.segT = 0;
-      this.health = cfg.health * (this.isElite ? ELITE_HEALTH_MULT : 1);
+      var baseHealth = this.isBoss ? cfg.health * def.healthMult : cfg.health * def.healthMult * (this.isElite ? ELITE_HEALTH_MULT : 1);
+      this.health = baseHealth;
       this.maxHealth = this.health;
-      this.speed = cfg.speed * (this.isElite ? ELITE_SPEED_MULT : 1); // tiles per second
+      this.speed = cfg.speed * def.speedMult * (this.isElite ? ELITE_SPEED_MULT : 1);
       this.slowFactor = 1;
-      this.sprite = enemySpriteForLevel(level);
+      this.armor = def.armor;
+      this.poisonStacks = 0;
+      this.poisonTimer = 0;
+      this.bobPhase = Math.random() * Math.PI * 2;
       var lane = grid.lanes[this.laneIndex];
       var p = tileCenter(lane.pathCells[0].col, lane.pathCells[0].row);
       this.x = p.x; this.y = p.y;
     }
     Enemy.prototype.update = function (dt) {
       var wps = grid.lanes[this.laneIndex].waypoints;
+      this.bobPhase += dt * 6;
       if (this.segIndex >= wps.length - 1) return;
-      var stepTiles = this.speed * this.slowFactor * dt; // tiles this frame
+      var stepTiles = this.speed * this.slowFactor * dt;
       this.segT += stepTiles;
       while (this.segT >= 1 && this.segIndex < wps.length - 1) {
         this.segT -= 1;
@@ -797,84 +1039,384 @@
       this.x = a.x + (b.x - a.x) * this.segT;
       this.y = a.y + (b.y - a.y) * this.segT;
       this.slowFactor = Math.min(1, this.slowFactor + dt * 0.6);
+
+      // Veneno: tic cada 0.5s, escala con las cargas acumuladas.
+      if (this.poisonStacks > 0) {
+        this.poisonTimer -= dt;
+        if (this.poisonTimer <= 0) {
+          this.poisonTimer = 0.5;
+          var tick = this.poisonStacks * 1.6;
+          this.health -= tick;
+          spawnParticles(this.x, this.y, '#5cff9e', 2, 30);
+        }
+      }
+      // Curandero: cura a los enemigos de su carril cerca de él.
+      if (this.def.healAura > 0) {
+        var lane = game.enemies.filter(function (e) { return e.laneIndex === this.laneIndex && e !== this; }, this);
+        lane.forEach(function (e) {
+          if (Math.hypot(e.x - this.x, e.y - this.y) < grid.tileSize * 1.6) {
+            e.health = Math.min(e.maxHealth, e.health + this.def.healAura * dt);
+          }
+        }, this);
+      }
     };
     Enemy.prototype.reachedEnd = function () {
       return this.segIndex >= grid.lanes[this.laneIndex].waypoints.length - 1;
     };
     Enemy.prototype.takeDamage = function (dmg) {
-      this.health -= dmg;
+      var actual = dmg * (1 - this.armor);
+      this.health -= actual;
       return this.health <= 0;
     };
     Enemy.prototype.applySlow = function (factor) {
       this.slowFactor = Math.max(0.35, this.slowFactor * factor);
     };
-    Enemy.prototype.draw = function () {
-      var r = grid.tileSize * 0.28;
-      var hp = this.health / this.maxHealth;
-      if (this.isElite) {
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, grid.tileSize * 0.42, 0, Math.PI * 2);
-        ctx.strokeStyle = '#ffd166';
-        ctx.lineWidth = Math.max(2, grid.tileSize * 0.05);
-        ctx.stroke();
-      }
-      var icon = enemyIconImages[this.sprite];
-      if (icon && icon.complete && icon.naturalWidth) {
-        var dSize = grid.tileSize * (this.isElite ? 0.9 : 0.78);
-        ctx.drawImage(icon, this.x - dSize / 2, this.y - dSize * 0.62, dSize, dSize);
-      } else {
-        ctx.fillStyle = '#3a8fd9';
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, r, 0, Math.PI * 2);
-        ctx.fill();
-      }
-
-      var barW = r * 2;
-      ctx.fillStyle = 'rgba(0,0,0,0.5)';
-      ctx.fillRect(this.x - barW / 2, this.y - r - 10, barW, 4);
-      ctx.fillStyle = hp > 0.4 ? '#4ecdc4' : '#e94560';
-      ctx.fillRect(this.x - barW / 2, this.y - r - 10, barW * hp, 4);
+    Enemy.prototype.applyPoison = function () {
+      this.poisonStacks = Math.min(5, this.poisonStacks + 1);
+      if (this.poisonTimer <= 0) this.poisonTimer = 0.5;
     };
 
+    /* ---- dibujo vectorial de enemigos (sin sprites) ---- */
+    function drawEnemyShape(e, ts) {
+      var size = ts * (e.isBoss ? 1.35 : e.isElite ? 0.92 : 0.72);
+      var bob = Math.sin(e.bobPhase) * ts * 0.03;
+      var cx = e.x, cy = e.y + bob;
+      var col = e.def.color;
+      ctx.save();
+      ctx.translate(cx, cy);
+
+      if (e.def.shape === 'slime') {
+        ctx.beginPath();
+        ctx.ellipse(0, size * 0.08, size * 0.42, size * 0.34, 0, 0, Math.PI * 2);
+        var g = ctx.createRadialGradient(-size * 0.12, -size * 0.1, size * 0.05, 0, 0, size * 0.45);
+        g.addColorStop(0, shadeColor(col, 40)); g.addColorStop(1, col);
+        ctx.fillStyle = g; ctx.fill();
+        ctx.fillStyle = 'rgba(255,255,255,0.55)';
+        ctx.beginPath(); ctx.ellipse(-size * 0.13, -size * 0.06, size * 0.1, size * 0.06, -0.4, 0, Math.PI * 2); ctx.fill();
+        drawEyes(size * 0.09, -size * 0.02, size * 0.055);
+      } else if (e.def.shape === 'goblin') {
+        ctx.fillStyle = col;
+        ctx.beginPath();
+        ctx.moveTo(0, -size * 0.4);
+        ctx.lineTo(size * 0.34, size * 0.18);
+        ctx.lineTo(size * 0.2, size * 0.42);
+        ctx.lineTo(-size * 0.2, size * 0.42);
+        ctx.lineTo(-size * 0.34, size * 0.18);
+        ctx.closePath(); ctx.fill();
+        ctx.fillStyle = shadeColor(col, -30);
+        ctx.beginPath(); ctx.moveTo(-size * 0.34, -size * 0.1); ctx.lineTo(-size * 0.5, -size * 0.28); ctx.lineTo(-size * 0.22, -size * 0.14); ctx.closePath(); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(size * 0.34, -size * 0.1); ctx.lineTo(size * 0.5, -size * 0.28); ctx.lineTo(size * 0.22, -size * 0.14); ctx.closePath(); ctx.fill();
+        drawEyes(size * 0.1, -size * 0.08, size * 0.05);
+      } else if (e.def.shape === 'brute') {
+        ctx.fillStyle = shadeColor(col, -20);
+        roundRect(-size * 0.42, -size * 0.4, size * 0.84, size * 0.8, size * 0.14);
+        ctx.fill();
+        ctx.fillStyle = col;
+        roundRect(-size * 0.34, -size * 0.32, size * 0.68, size * 0.64, size * 0.1);
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.lineWidth = size * 0.04;
+        ctx.beginPath(); ctx.moveTo(-size * 0.3, 0); ctx.lineTo(size * 0.3, 0); ctx.stroke();
+        drawEyes(size * 0.13, -size * 0.05, size * 0.06);
+      } else if (e.def.shape === 'bat') {
+        var flap = Math.sin(e.bobPhase * 2) * size * 0.3;
+        ctx.fillStyle = col;
+        ctx.beginPath(); ctx.ellipse(0, 0, size * 0.24, size * 0.28, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(-size * 0.18, -size * 0.05);
+        ctx.quadraticCurveTo(-size * 0.55, -size * 0.1 - flap, -size * 0.5, size * 0.15);
+        ctx.quadraticCurveTo(-size * 0.3, size * 0.05, -size * 0.18, size * 0.1);
+        ctx.closePath(); ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(size * 0.18, -size * 0.05);
+        ctx.quadraticCurveTo(size * 0.55, -size * 0.1 - flap, size * 0.5, size * 0.15);
+        ctx.quadraticCurveTo(size * 0.3, size * 0.05, size * 0.18, size * 0.1);
+        ctx.closePath(); ctx.fill();
+        drawEyes(size * 0.07, -size * 0.03, size * 0.04, '#ffe97c');
+      } else if (e.def.shape === 'healer') {
+        ctx.fillStyle = col;
+        ctx.beginPath(); ctx.arc(0, 0, size * 0.38, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = '#fff'; ctx.lineWidth = size * 0.09;
+        ctx.beginPath(); ctx.moveTo(-size * 0.16, 0); ctx.lineTo(size * 0.16, 0); ctx.moveTo(0, -size * 0.16); ctx.lineTo(0, size * 0.16); ctx.stroke();
+        drawEyes(size * 0.11, -size * 0.14, size * 0.045);
+      } else if (e.def.shape === 'boss') {
+        ctx.fillStyle = shadeColor(col, -30);
+        ctx.beginPath();
+        for (var i = 0; i < 8; i++) {
+          var ang = (i / 8) * Math.PI * 2;
+          var rr = size * (i % 2 === 0 ? 0.5 : 0.36);
+          var px = Math.cos(ang) * rr, py = Math.sin(ang) * rr;
+          if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+        }
+        ctx.closePath(); ctx.fill();
+        ctx.fillStyle = col;
+        ctx.beginPath(); ctx.arc(0, 0, size * 0.34, 0, Math.PI * 2); ctx.fill();
+        drawEyes(size * 0.15, -size * 0.02, size * 0.075, '#fff700');
+      } else {
+        ctx.fillStyle = col;
+        ctx.beginPath(); ctx.arc(0, 0, size * 0.35, 0, Math.PI * 2); ctx.fill();
+      }
+
+      if (e.poisonStacks > 0) {
+        ctx.fillStyle = 'rgba(92,255,158,' + Math.min(0.5, 0.15 + e.poisonStacks * 0.07) + ')';
+        ctx.beginPath(); ctx.arc(0, 0, size * 0.5, 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.restore();
+
+      function drawEyes(spread, yOff, r, eyeColor) {
+        ctx.fillStyle = eyeColor || '#1a1a2e';
+        ctx.beginPath(); ctx.arc(-spread, yOff, r, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(spread, yOff, r, 0, Math.PI * 2); ctx.fill();
+      }
+      function roundRect(x, y, w, h, r) {
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.arcTo(x + w, y, x + w, y + h, r);
+        ctx.arcTo(x + w, y + h, x, y + h, r);
+        ctx.arcTo(x, y + h, x, y, r);
+        ctx.arcTo(x, y, x + w, y, r);
+        ctx.closePath();
+      }
+    }
+
+    Enemy.prototype.draw = function () {
+      var ts = grid.tileSize;
+      var r = ts * 0.28 * (this.isBoss ? 1.35 : this.isElite ? 0.92 : 1);
+      var hp = this.health / this.maxHealth;
+
+      if (this.def.flying) {
+        ctx.beginPath();
+        ctx.ellipse(this.x, this.y + ts * 0.32, ts * 0.22, ts * 0.06, 0, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(0,0,0,0.25)';
+        ctx.fill();
+      }
+      if (this.isElite && !this.isBoss) {
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, ts * 0.42, 0, Math.PI * 2);
+        ctx.strokeStyle = '#ffd166';
+        ctx.lineWidth = Math.max(2, ts * 0.05);
+        ctx.stroke();
+      }
+      if (this.isBoss) {
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, ts * 0.62, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(255,46,99,0.55)';
+        ctx.lineWidth = Math.max(2, ts * 0.06);
+        ctx.stroke();
+      }
+
+      drawEnemyShape(this, ts);
+
+      var barW = r * 2.1;
+      ctx.fillStyle = 'rgba(0,0,0,0.5)';
+      ctx.fillRect(this.x - barW / 2, this.y - r - 12, barW, 4);
+      ctx.fillStyle = hp > 0.4 ? '#4ecdc4' : '#e94560';
+      ctx.fillRect(this.x - barW / 2, this.y - r - 12, barW * hp, 4);
+    };
+
+    function shadeColor(hex, amt) {
+      var n = parseInt(hex.slice(1), 16);
+      var r = clamp(((n >> 16) & 255) + amt, 0, 255);
+      var g = clamp(((n >> 8) & 255) + amt, 0, 255);
+      var b = clamp((n & 255) + amt, 0, 255);
+      return 'rgb(' + r + ',' + g + ',' + b + ')';
+    }
+
+    /* =========================================================
+       6. ENTIDADES: TORRE
+       ========================================================= */
+    var TOWER_MAX_LEVEL = 5;
     function Tower(col, row, type) {
       this.col = col; this.row = row; this.type = type;
-      this.level = 1; this.shootTimer = 0;
+      this.level = 1; this.shootTimer = 0; this.recoil = 0; this.aimAngle = 0;
       var p = tileCenter(col, row);
       this.x = p.x; this.y = p.y;
       var t = TOWER_TYPES[type];
+      this.def = t;
       this.color = t.color;
       this.damage = t.damage;
       this.rangeTiles = t.rangeTiles;
       this.speed = t.speed;
+      this.totalSpentMana = t.manaCost;
     }
     Tower.prototype.rangePx = function () { return this.rangeTiles * grid.tileSize; };
     Tower.prototype.update = function (dt) {
       this.shootTimer += dt;
+      if (this.recoil > 0) this.recoil = Math.max(0, this.recoil - dt * 4);
       var interval = 1 / this.speed;
       if (this.shootTimer >= interval) {
         var target = this.findTarget();
-        if (target) { this.shoot(target); this.shootTimer = 0; }
+        if (target) {
+          this.aimAngle = Math.atan2(target.y - this.y, target.x - this.x);
+          this.shoot(target);
+          this.shootTimer = 0;
+          this.recoil = 1;
+        }
       }
     };
+    Tower.prototype.canHit = function (e) { return this.def.antiAir || !e.def.flying; };
     Tower.prototype.findTarget = function () {
       var range = this.rangePx();
       var best = null, bestProgress = -1;
       for (var i = 0; i < game.enemies.length; i++) {
         var e = game.enemies[i];
+        if (!this.canHit(e)) continue;
         var d = Math.hypot(e.x - this.x, e.y - this.y);
         if (d <= range && e.segIndex > bestProgress) { best = e; bestProgress = e.segIndex; }
       }
       return best;
     };
+    function killEnemy(e) {
+      game.enemies = game.enemies.filter(function (x) { return x !== e; });
+      spawnParticles(e.x, e.y, e.def.color, e.isBoss ? 26 : e.isElite ? 16 : 9, e.isBoss ? 160 : 110);
+      var reward = LEVEL_CONFIGS[game.level - 1].reward * (e.isBoss ? 6 : e.isElite ? 2 : 1);
+      game.mana = Math.min(MAX_MANA, game.mana + reward);
+    }
     Tower.prototype.shoot = function (target) {
-      game.shots.push({ x1: this.x, y1: this.y, x2: target.x, y2: target.y, color: this.color, life: 0.12 });
-      if (target.takeDamage(this.damage)) {
-        game.enemies = game.enemies.filter(function (e) { return e !== target; });
-        game.mana = Math.min(MAX_MANA, game.mana + LEVEL_CONFIGS[game.level - 1].reward);
-        updateUI();
+      game.shots.push({ x1: this.x, y1: this.y, x2: target.x, y2: target.y, color: this.def.color2, life: 0.14, width: this.type === 'sniper' ? 3 : 2 });
+      spawnParticles(target.x, target.y, this.def.color2, 4, 60);
+
+      if (this.type === 'electric') {
+        var hitSet = [target];
+        var cur = target;
+        for (var c = 0; c < (this.def.chain - 1); c++) {
+          var next = null, bestD = 999999;
+          game.enemies.forEach(function (e) {
+            if (hitSet.indexOf(e) !== -1 || !this.canHit(e)) return;
+            var d = Math.hypot(e.x - cur.x, e.y - cur.y);
+            if (d < grid.tileSize * 2.2 && d < bestD) { next = e; bestD = d; }
+          }, this);
+          if (!next) break;
+          game.shots.push({ x1: cur.x, y1: cur.y, x2: next.x, y2: next.y, color: this.def.color2, life: 0.14, width: 2 });
+          hitSet.push(next);
+          cur = next;
+        }
+        hitSet.forEach(function (e, idx) {
+          var dmg = this.damage * (idx === 0 ? 1 : 0.6);
+          if (e.takeDamage(dmg)) killEnemy(e);
+        }, this);
+      } else if (this.type === 'sniper' || this.type === 'fire' || this.type === 'frost') {
+        if (target.takeDamage(this.damage)) killEnemy(target);
+        if (this.type === 'frost') target.applySlow(0.55);
+      } else if (this.type === 'venom') {
+        if (target.takeDamage(this.damage)) killEnemy(target);
+        else target.applyPoison();
+      } else if (this.type === 'nature') {
+        if (target.takeDamage(this.damage)) killEnemy(target);
       }
-      if (this.type === 'frost') target.applySlow(0.55);
+      updateUI();
     };
+    Tower.prototype.upgradeCost = function () {
+      return Math.round(this.def.manaCost * 0.75 * this.level);
+    };
+    Tower.prototype.sellValue = function () {
+      return Math.round(this.totalSpentMana * 0.6);
+    };
+    Tower.prototype.evolve = function () {
+      if (this.level >= TOWER_MAX_LEVEL) return false;
+      this.level++;
+      this.damage *= 1.32;
+      this.rangeTiles *= 1.06;
+      this.speed *= 1.12;
+      this.totalSpentMana += this.upgradeCost();
+      return true;
+    };
+
+    /* ---- dibujo vectorial de torres (sin sprites), por nivel ---- */
+    function drawTowerShape(t, ts) {
+      var s = ts * (0.62 + t.level * 0.05);
+      ctx.save();
+      ctx.translate(t.x, t.y);
+
+      // base circular común a todas
+      var baseGrad = ctx.createRadialGradient(0, ts * 0.05, s * 0.1, 0, ts * 0.1, s * 0.55);
+      baseGrad.addColorStop(0, shadeColor(t.color, 30));
+      baseGrad.addColorStop(1, shadeColor(t.color, -40));
+      ctx.beginPath(); ctx.ellipse(0, ts * 0.12, s * 0.5, s * 0.22, 0, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fill();
+
+      ctx.save();
+      ctx.rotate(t.aimAngle - Math.PI / 2);
+      var kick = t.recoil * s * 0.08;
+      ctx.translate(0, kick);
+
+      if (t.def.shape === 'fire') {
+        ctx.fillStyle = shadeColor(t.color, -25);
+        drawPoly(0, s * 0.05, s * 0.32, s * 0.55, 6);
+        var flameGrad = ctx.createLinearGradient(0, s * 0.1, 0, -s * 0.55);
+        flameGrad.addColorStop(0, t.color); flameGrad.addColorStop(1, t.def.color2);
+        ctx.fillStyle = flameGrad;
+        ctx.beginPath();
+        ctx.moveTo(0, -s * 0.55);
+        ctx.quadraticCurveTo(s * 0.3, -s * 0.1, s * 0.14, s * 0.15);
+        ctx.quadraticCurveTo(0, s * 0.3, -s * 0.14, s * 0.15);
+        ctx.quadraticCurveTo(-s * 0.3, -s * 0.1, 0, -s * 0.55);
+        ctx.fill();
+      } else if (t.def.shape === 'frost') {
+        ctx.fillStyle = shadeColor(t.color, -25);
+        drawPoly(0, s * 0.05, s * 0.32, s * 0.5, 8);
+        ctx.strokeStyle = t.def.color2; ctx.lineWidth = s * 0.07; ctx.lineCap = 'round';
+        for (var i = 0; i < 6; i++) {
+          var a = (i / 6) * Math.PI * 2;
+          ctx.beginPath(); ctx.moveTo(0, -s * 0.1); ctx.lineTo(Math.cos(a) * s * 0.45, -s * 0.1 + Math.sin(a) * s * 0.45); ctx.stroke();
+        }
+        ctx.fillStyle = t.def.color2;
+        ctx.beginPath(); ctx.arc(0, -s * 0.1, s * 0.12, 0, Math.PI * 2); ctx.fill();
+      } else if (t.def.shape === 'nature') {
+        ctx.fillStyle = shadeColor(t.color, -25);
+        ctx.fillRect(-s * 0.1, -s * 0.05, s * 0.2, s * 0.5);
+        ctx.fillStyle = t.def.color2;
+        for (var lv = 0; lv < 3; lv++) {
+          ctx.beginPath();
+          ctx.ellipse(0, -s * 0.15 - lv * s * 0.18, s * (0.36 - lv * 0.06), s * 0.16, 0, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      } else if (t.def.shape === 'electric') {
+        ctx.fillStyle = shadeColor(t.color, -25);
+        drawPoly(0, s * 0.05, s * 0.32, s * 0.55, 5);
+        ctx.fillStyle = t.def.color2;
+        ctx.beginPath();
+        ctx.moveTo(-s * 0.08, -s * 0.55); ctx.lineTo(s * 0.12, -s * 0.2); ctx.lineTo(-s * 0.02, -s * 0.2);
+        ctx.lineTo(s * 0.1, s * 0.15); ctx.lineTo(-s * 0.16, -s * 0.08); ctx.lineTo(-s * 0.02, -s * 0.08);
+        ctx.closePath(); ctx.fill();
+      } else if (t.def.shape === 'venom') {
+        ctx.fillStyle = shadeColor(t.color, -25);
+        drawPoly(0, s * 0.05, s * 0.32, s * 0.5, 7);
+        ctx.fillStyle = t.def.color2;
+        ctx.beginPath(); ctx.arc(0, -s * 0.15, s * 0.24, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = shadeColor(t.color, -25);
+        ctx.beginPath(); ctx.arc(-s * 0.08, -s * 0.18, s * 0.04, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(s * 0.08, -s * 0.18, s * 0.04, 0, Math.PI * 2); ctx.fill();
+      } else if (t.def.shape === 'sniper') {
+        ctx.fillStyle = shadeColor(t.color, -20);
+        ctx.fillRect(-s * 0.22, -s * 0.05, s * 0.44, s * 0.4);
+        ctx.fillStyle = shadeColor(t.color, 10);
+        ctx.fillRect(-s * 0.07, -s * 0.7, s * 0.14, s * 0.7);
+        ctx.fillStyle = t.def.color2;
+        ctx.beginPath(); ctx.arc(0, -s * 0.05, s * 0.16, 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.restore();
+
+      // aro de nivel: puntitos dorados alrededor de la base según el nivel
+      for (var lvI = 0; lvI < t.level - 1; lvI++) {
+        var ang2 = (lvI / (TOWER_MAX_LEVEL - 1)) * Math.PI * 2 - Math.PI / 2;
+        ctx.beginPath();
+        ctx.arc(Math.cos(ang2) * s * 0.56, ts * 0.12 + Math.sin(ang2) * s * 0.22, s * 0.05, 0, Math.PI * 2);
+        ctx.fillStyle = '#ffd166';
+        ctx.fill();
+      }
+      ctx.restore();
+
+      function drawPoly(cx, cy, r1, h, sides) {
+        ctx.beginPath();
+        for (var i2 = 0; i2 < sides; i2++) {
+          var a2 = (i2 / sides) * Math.PI * 2;
+          var px = cx + Math.cos(a2) * r1 * 0.7, py = cy + Math.sin(a2) * r1 * 0.35;
+          if (i2 === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+        }
+        ctx.closePath(); ctx.fill();
+      }
+    }
+
     Tower.prototype.draw = function (isSelected) {
       var ts = grid.tileSize;
       var p = tileCenter(this.col, this.row);
@@ -890,49 +1432,21 @@
         ctx.stroke();
       }
 
-      var icon = towerIconImages[this.type];
-      var dSize = ts * 1.32;
-      var groundFrac = 0.76; // fraction of the icon's height that sits at tile center (its base)
-      if (icon && icon.complete && icon.naturalWidth) {
-        ctx.drawImage(icon, this.x - dSize / 2, this.y - dSize * groundFrac, dSize, dSize);
-      } else {
-        var r = ts * 0.32;
-        ctx.fillStyle = this.color;
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, r, 0, Math.PI * 2);
-        ctx.fill();
-      }
+      drawTowerShape(this, ts);
 
       if (this.level > 1) {
         ctx.fillStyle = '#FFD700';
-        ctx.font = 'bold ' + Math.round(ts * 0.24) + 'px Arial';
+        ctx.font = 'bold ' + Math.round(ts * 0.22) + 'px Arial';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(String(this.level), this.x, this.y);
+        ctx.strokeStyle = 'rgba(0,0,0,0.6)'; ctx.lineWidth = 3;
+        ctx.strokeText(String(this.level), this.x, this.y + ts * 0.32);
+        ctx.fillText(String(this.level), this.x, this.y + ts * 0.32);
       }
     };
-    Tower.prototype.upgradeCost = function () {
-      return Math.round(TOWER_TYPES[this.type].manaCost * 0.8 * this.level);
-    };
-    Tower.prototype.evolve = function () {
-      if (this.level >= 3) return false;
-      this.level++;
-      this.damage *= 1.35;
-      this.rangeTiles *= 1.08;
-      this.speed *= 1.15;
-      return true;
-    };
-
-    function shade(hex, amt) {
-      var n = parseInt(hex.slice(1), 16);
-      var r = clamp(((n >> 16) & 255) + amt, 0, 255);
-      var g = clamp(((n >> 8) & 255) + amt, 0, 255);
-      var b = clamp((n & 255) + amt, 0, 255);
-      return 'rgb(' + r + ',' + g + ',' + b + ')';
-    }
 
     /* =========================================================
-       5. RENDER
+       7. RENDER DEL TABLERO
        ========================================================= */
     var GRASS = ['#1f6b46', '#256f4a'];
     var PATH = ['#8f8371', '#968a77'];
@@ -958,7 +1472,6 @@
         });
       });
 
-      // path edge trim (walls) where a path tile touches a non-path/out-of-bounds neighbor
       ctx.strokeStyle = PATH_EDGE;
       ctx.lineWidth = Math.max(2, ts * 0.07);
       ctx.lineCap = 'round';
@@ -980,9 +1493,6 @@
         });
       });
 
-      // Marcadores de entrada (spawn) y meta (tu base) en cada carril --
-      // para que se vea claramente por dónde entran los enemigos y qué
-      // defiendes, tanto si hay 1 camino como si hay 2.
       grid.lanes.forEach(function (lane) {
         if (!lane.waypoints.length) return;
         drawEndpointMarker(lane.waypoints[0], '#4ecdc4', '▶');
@@ -1014,8 +1524,8 @@
         s.life -= dt;
         if (s.life <= 0) return false;
         ctx.strokeStyle = s.color;
-        ctx.globalAlpha = clamp(s.life / 0.12, 0, 1);
-        ctx.lineWidth = 2;
+        ctx.globalAlpha = clamp(s.life / 0.14, 0, 1);
+        ctx.lineWidth = s.width || 2;
         ctx.beginPath();
         ctx.moveTo(s.x1, s.y1);
         ctx.lineTo(s.x2, s.y2);
@@ -1026,7 +1536,7 @@
     }
 
     /* =========================================================
-       6. GAME FLOW
+       8. GAME FLOW
        ========================================================= */
     function showToast(msg) {
       var t = document.getElementById('toast');
@@ -1034,6 +1544,32 @@
       t.classList.add('show');
       clearTimeout(showToast._h);
       showToast._h = setTimeout(function () { t.classList.remove('show'); }, 1400);
+    }
+    function showBigBanner(msg) {
+      var el = document.getElementById('bigBannerText');
+      el.textContent = msg;
+      el.classList.remove('show');
+      void el.offsetWidth;
+      el.classList.add('show');
+    }
+
+    function buildTowerRow() {
+      var row = document.getElementById('towerRow');
+      row.innerHTML = '';
+      TOWER_ORDER.forEach(function (id) {
+        var t = TOWER_TYPES[id];
+        var unlocked = game.level >= TOWER_UNLOCK_LEVEL[id];
+        var btn = document.createElement('button');
+        btn.className = 'tower-chip' + (unlocked ? '' : ' locked');
+        btn.dataset.tower = id;
+        btn.innerHTML =
+          '<div class="tower-icon-wrap" style="background:radial-gradient(circle at 35% 30%,' + t.color2 + ',' + t.color + ')">' + (unlocked ? t.symbol : '🔒') + '</div>' +
+          '<span>' + t.name + '</span>' +
+          '<span class="tower-cost" id="cost_' + id + '"></span>';
+        if (unlocked) btn.onclick = function () { selectTower(id, btn); };
+        else btn.onclick = function () { showToast(t.name + ' se desbloquea en el nivel ' + TOWER_UNLOCK_LEVEL[id]); };
+        row.appendChild(btn);
+      });
     }
 
     window.selectTower = function selectTower(type, btnEl) {
@@ -1043,8 +1579,8 @@
       if (btnEl) btnEl.classList.add('selected');
       var t = TOWER_TYPES[type];
       document.getElementById('panelInfo').innerHTML =
-        '<b>' + t.name + '</b> · Coste ' + t.manaCost + ' 💧<br>' + t.desc;
-    }
+        '<b>' + t.symbol + ' ' + t.name + '</b> · Coste ' + t.manaCost + ' 💧<br>' + t.desc;
+    };
 
     function handleTap(clientX, clientY) {
       var rect = canvas.getBoundingClientRect();
@@ -1066,6 +1602,7 @@
       }
 
       var type = game.selectedTower;
+      if (game.level < TOWER_UNLOCK_LEVEL[type]) { showToast('Torre bloqueada'); return; }
       var cfg = TOWER_TYPES[type];
       if (game.mana < cfg.manaCost) {
         showToast('Maná insuficiente (' + cfg.manaCost + ' 💧)');
@@ -1080,26 +1617,35 @@
 
     function showUpgradePanel(tower) {
       var cost = tower.upgradeCost();
-      var maxed = tower.level >= 3;
+      var maxed = tower.level >= TOWER_MAX_LEVEL;
+      var sell = tower.sellValue();
       var panel = document.getElementById('panelInfo');
       panel.innerHTML =
-        '<b>' + TOWER_TYPES[tower.type].name + ' Nv' + tower.level + '</b><br>' +
-        (maxed
-          ? '<span class="warn">Nivel máximo</span>'
-          : 'Mejorar: ' + cost + ' 💧 ' +
-            '<button onclick="upgradeSelectedTower()" style="margin-left:6px;padding:2px 8px;border-radius:6px;border:none;background:#4ecdc4;color:#0a0e1a;font-weight:700;cursor:pointer;">Mejorar</button>');
+        '<b>' + tower.def.symbol + ' ' + tower.def.name + ' Nv' + tower.level + '</b><br>' +
+        (maxed ? '<span class="warn">Nivel máximo</span>' : 'Mejorar: ' + cost + ' 💧') +
+        '<button class="mini-btn upgrade" onclick="upgradeSelectedTower()" ' + (maxed ? 'disabled' : '') + '>▲ Mejorar</button>' +
+        '<button class="mini-btn sell" onclick="sellSelectedTower()">Vender (' + sell + ' 💧)</button>';
     }
 
     window.upgradeSelectedTower = function () {
       var tower = game.selectedPlacedTower;
       if (!tower) return;
       var cost = tower.upgradeCost();
-      if (tower.level >= 3) return;
+      if (tower.level >= TOWER_MAX_LEVEL) return;
       if (game.mana < cost) { showToast('Maná insuficiente (' + cost + ' 💧)'); return; }
       game.mana -= cost;
       tower.evolve();
       updateUI();
       showUpgradePanel(tower);
+    };
+    window.sellSelectedTower = function () {
+      var tower = game.selectedPlacedTower;
+      if (!tower) return;
+      game.mana = Math.min(MAX_MANA, game.mana + tower.sellValue());
+      game.towers = game.towers.filter(function (t) { return t !== tower; });
+      game.selectedPlacedTower = null;
+      document.getElementById('panelInfo').innerHTML = 'Torre vendida.';
+      updateUI();
     };
 
     canvas.addEventListener('click', function (e) { handleTap(e.clientX, e.clientY); });
@@ -1109,19 +1655,16 @@
       if (game.isWaveActive || game.wave > game.maxWaves) return;
       game.isWaveActive = true;
       game.selectedPlacedTower = null;
+      game.bossSpawnedThisWave = false;
       document.getElementById('startBtn').disabled = true;
 
       var cfg = LEVEL_CONFIGS[game.level - 1];
       var laneMult = grid.lanes.length > 1 ? TWO_LANE_ENEMY_MULT : 1;
       game.enemiesToSpawn = Math.round(cfg.enemies * laneMult);
       game.enemiesSpawnedThisWave = 0;
-      // Acumulador impulsado por dt (no setInterval real) para que el spawn
-      // también respete el multiplicador de velocidad: a x16, dt ya viene
-      // escalado x16 en cada frame, así que este contador baja igual de
-      // rápido en tiempo de juego aunque el reloj real no se altere.
       game.spawnIntervalSec = cfg.spawnMs / 1000;
       game.spawnAccum = 0;
-    }
+    };
 
     function updateUI() {
       document.getElementById('levelNum').textContent = game.level;
@@ -1129,80 +1672,121 @@
       document.getElementById('waveMax').textContent = game.maxWaves;
       document.getElementById('lives').textContent = game.lives;
       document.getElementById('manaText').textContent = Math.floor(game.mana);
+      document.getElementById('runGems').textContent = game.runGems;
       document.getElementById('manaBar').style.width = clamp((game.mana / MAX_MANA) * 100, 0, 100) + '%';
-      document.getElementById('costFire').textContent = TOWER_TYPES.fire.manaCost + ' 💧';
-      document.getElementById('costFrost').textContent = TOWER_TYPES.frost.manaCost + ' 💧';
-      document.getElementById('costNature').textContent = TOWER_TYPES.nature.manaCost + ' 💧';
+      TOWER_ORDER.forEach(function (id) {
+        var el = document.getElementById('cost_' + id);
+        if (el) el.textContent = game.level >= TOWER_UNLOCK_LEVEL[id] ? TOWER_TYPES[id].manaCost + ' 💧' : 'Nv ' + TOWER_UNLOCK_LEVEL[id];
+      });
     }
 
     /* =========================================================
-       7. LOOP
+       9. LOOP
        ========================================================= */
     var lastTs = 0;
-    game.shots = [];
+    var lastLives = game.lives;
+
+    function endRun(won) {
+      if (game.ended) return;
+      game.ended = true;
+      var earned = Math.round((game.level * 3 + game.wave) * (1 + metaUpgradeLevel('gems') * 0.1));
+      meta.gems += earned;
+      saveMeta();
+      document.getElementById('endTitle').textContent = won ? '¡Victoria!' : 'Fin de la partida';
+      document.getElementById('endDesc').textContent = won
+        ? 'Has completado todos los niveles.'
+        : 'Llegaste al nivel ' + game.level + ', ola ' + game.wave + '.';
+      document.getElementById('endGems').textContent = earned;
+      document.getElementById('endOverlay').hidden = false;
+    }
 
     function tick(ts) {
       var rawDt = lastTs ? Math.min(0.05, (ts - lastTs) / 1000) : 0;
       lastTs = ts;
       var dt = rawDt * gameSpeed;
 
-      if (game.isWaveActive && game.enemiesToSpawn > 0) {
-        game.spawnAccum += dt;
-        while (game.spawnAccum >= game.spawnIntervalSec && game.enemiesToSpawn > 0) {
-          game.spawnAccum -= game.spawnIntervalSec;
-          var laneIndex = Math.floor(Math.random() * grid.lanes.length);
-          game.enemiesSpawnedThisWave++;
-          var isElite = game.enemiesSpawnedThisWave % ELITE_EVERY === 0;
-          game.enemies.push(new Enemy(game.level, laneIndex, isElite));
-          game.enemiesToSpawn--;
-        }
-      }
-
-      if (game.isWaveActive) {
-        game.mana = Math.min(MAX_MANA, game.mana + PASSIVE_MANA_PER_SEC * dt);
-      }
-
-      game.towers.forEach(function (t) { t.update(dt); });
-
-      game.enemies.forEach(function (e) { e.update(dt); });
-      var remaining = [];
-      game.enemies.forEach(function (e) {
-        if (e.reachedEnd()) {
-          game.lives--;
-        } else {
-          remaining.push(e);
-        }
-      });
-      game.enemies = remaining;
-
-      if (game.isWaveActive && game.enemies.length === 0 && game.enemiesToSpawn === 0) {
-        game.isWaveActive = false;
-        if (game.wave < game.maxWaves) {
-          game.wave++;
-        } else {
-          game.wave = 1;
-          if (game.level < LEVEL_CONFIGS.length) {
-            game.level++;
-            showToast('¡Nivel ' + game.level + '!');
-          } else {
-            showToast('¡Victoria! Reiniciando...');
-            setTimeout(function () { location.reload(); }, 1800);
+      if (!game.ended) {
+        if (game.isWaveActive && game.enemiesToSpawn > 0) {
+          game.spawnAccum += dt;
+          while (game.spawnAccum >= game.spawnIntervalSec && game.enemiesToSpawn > 0) {
+            game.spawnAccum -= game.spawnIntervalSec;
+            var laneIndex = Math.floor(Math.random() * grid.lanes.length);
+            game.enemiesSpawnedThisWave++;
+            var isLastWaveOfLevel = game.wave === game.maxWaves;
+            var isLastEnemy = game.enemiesToSpawn === 1;
+            var forcedType = null;
+            if (isLastWaveOfLevel && isLastEnemy && !game.bossSpawnedThisWave) {
+              forcedType = 'boss';
+              game.bossSpawnedThisWave = true;
+            }
+            var isElite = !forcedType && game.enemiesSpawnedThisWave % ELITE_EVERY === 0;
+            game.enemies.push(new Enemy(game.level, laneIndex, isElite, forcedType));
+            game.enemiesToSpawn--;
           }
         }
-        document.getElementById('startBtn').disabled = false;
-      }
 
-      if (game.lives <= 0) {
-        game.lives = 0;
-        showToast('Game Over — Nivel ' + game.level + ', Ola ' + game.wave);
-        game.enemiesToSpawn = 0;
-        game.isWaveActive = false;
-        setTimeout(function () { location.reload(); }, 2200);
+        var manaRegen = PASSIVE_MANA_PER_SEC + metaUpgradeLevel('regen') * 0.6;
+        if (game.isWaveActive) {
+          game.mana = Math.min(MAX_MANA, game.mana + manaRegen * dt);
+        }
+
+        game.towers.forEach(function (t) { t.update(dt); });
+        game.enemies.forEach(function (e) { e.update(dt); });
+        updateParticles(dt);
+
+        var remaining = [];
+        var livesLostThisFrame = 0;
+        game.enemies.forEach(function (e) {
+          if (e.reachedEnd()) { game.lives--; livesLostThisFrame++; }
+          else remaining.push(e);
+        });
+        game.enemies = remaining.filter(function (e) { return e.health > 0; });
+        if (livesLostThisFrame > 0) {
+          var lifeEl = document.getElementById('hudLives');
+          lifeEl.classList.remove('hit'); void lifeEl.offsetWidth; lifeEl.classList.add('hit');
+        }
+
+        var boss = game.enemies.find(function (e) { return e.isBoss; });
+        var bossBar = document.getElementById('bossBar');
+        if (boss) {
+          bossBar.classList.add('show');
+          document.getElementById('bossFill').style.width = clamp((boss.health / boss.maxHealth) * 100, 0, 100) + '%';
+        } else {
+          bossBar.classList.remove('show');
+        }
+
+        if (game.isWaveActive && game.enemies.length === 0 && game.enemiesToSpawn === 0) {
+          game.isWaveActive = false;
+          if (game.wave < game.maxWaves) {
+            game.wave++;
+          } else {
+            game.wave = 1;
+            if (game.level < LEVEL_CONFIGS.length) {
+              game.level++;
+              buildTowerRow();
+              showBigBanner('¡Nivel ' + game.level + '!');
+              showToast('¡Nivel ' + game.level + '!');
+            } else {
+              showBigBanner('¡VICTORIA!');
+              setTimeout(function () { endRun(true); }, 1200);
+            }
+          }
+          document.getElementById('startBtn').disabled = false;
+        }
+
+        if (game.lives <= 0) {
+          game.lives = 0;
+          showBigBanner('GAME OVER');
+          game.enemiesToSpawn = 0;
+          game.isWaveActive = false;
+          setTimeout(function () { endRun(false); }, 1200);
+        }
       }
 
       drawGrid();
       game.towers.forEach(function (t) { t.draw(t === game.selectedPlacedTower); });
       game.enemies.forEach(function (e) { e.draw(); });
+      drawParticles();
       drawShots(dt);
       updateUI();
 
@@ -1210,7 +1794,7 @@
     }
 
     /* =========================================================
-       8. INIT
+       10. INIT / RESIZE
        ========================================================= */
     function resize() {
       if (!grid) return;
@@ -1220,27 +1804,30 @@
         t.x = p.x; t.y = p.y;
       });
     }
-
     window.addEventListener('resize', resize);
     window.addEventListener('orientationchange', function () { setTimeout(resize, 200); });
 
     /* =========================================================
-       9. MENUS
+       11. MENÚS
        ========================================================= */
     var ADVENTURE_SEED_BASE = 918273;
     var ADVENTURE_LEVELS = [
       { level: 1, name: 'Primeros pasos' },
       { level: 2, name: 'Calentando motores' },
-      { level: 3, name: 'A por todas' },
-      { level: 4, name: 'Presión alta' },
-      { level: 5, name: 'El gran reto' }
+      { level: 3, name: 'Rayos y truenos' },
+      { level: 4, name: 'Aire y veneno' },
+      { level: 5, name: 'Curanderos al rescate' },
+      { level: 6, name: 'A por todas' },
+      { level: 7, name: 'Presión alta' },
+      { level: 8, name: 'El gran reto' }
     ];
 
     window.showScreen = function (id) {
-      ['menuScreen', 'playSelectScreen', 'adventureScreen', 'otrosScreen', 'gameScreen'].forEach(function (sid) {
+      ['menuScreen', 'playSelectScreen', 'adventureScreen', 'upgradeShopScreen', 'otrosScreen', 'gameScreen'].forEach(function (sid) {
         var el = document.getElementById(sid);
         if (el) el.hidden = sid !== id;
       });
+      refreshGemCounters();
     };
 
     function renderAdventureLevels() {
@@ -1254,7 +1841,7 @@
         btn.innerHTML =
           '<span class="adventure-level-num">' + lv.level + '</span>' +
           '<span class="adventure-level-text"><strong>' + lv.name + '</strong>' +
-          '<span>' + cfg.enemies + ' enemigos &middot; ' + Math.round(cfg.health) + ' vida</span></span>';
+          '<span>' + cfg.enemies + ' enemigos &middot; ' + Math.round(cfg.health) + ' vida &middot; jefe final</span></span>';
         btn.addEventListener('click', function () { startGame({ adventure: true, level: lv.level }); });
         wrap.appendChild(btn);
       });
@@ -1265,14 +1852,27 @@
     window.startGame = function (opts) {
       opts = opts || {};
       showScreen('gameScreen');
+      document.getElementById('endOverlay').hidden = true;
+      game.ended = false;
+      game.mana = START_MANA + metaUpgradeLevel('mana') * 15;
+      game.lives = START_LIVES + metaUpgradeLevel('lives') * 2;
+      game.runGems = 0;
+      game.towers = [];
+      game.enemies = [];
+      game.particles = [];
+      game.shots = [];
+      game.wave = 1;
+      game.selectedPlacedTower = null;
       if (opts.adventure) {
         game.level = opts.level || 1;
         rng = mulberry32(ADVENTURE_SEED_BASE + (opts.level || 1));
         buildGrid();
         rng = Math.random;
       } else {
+        game.level = 1;
         buildGrid();
       }
+      buildTowerRow();
       selectTower('fire', document.querySelector('.tower-chip[data-tower="fire"]'));
       updateUI();
       if (!gameStarted) {
