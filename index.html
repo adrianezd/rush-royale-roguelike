@@ -452,6 +452,7 @@
     <div class="menu-card">
       <h1 class="menu-title">Rush Royale<br><span>Roguelike</span></h1>
       <div class="menu-gems">💎 <span id="menuGems">0</span> gemas</div>
+      <button class="menu-btn menu-btn-primary" id="continueBtn" onclick="continueSavedGame()" hidden>Continuar</button>
       <button class="menu-btn menu-btn-primary" onclick="showScreen('playSelectScreen')">Empezar</button>
       <button class="menu-btn" onclick="showScreen('upgradeShopScreen'); renderUpgradeShop();">Mejoras permanentes<small>Gasta tus gemas</small></button>
       <button class="menu-btn" onclick="showScreen('otrosScreen')">Otros</button>
@@ -501,6 +502,7 @@
       <div class="hud-item" id="hudGems">💎 <span id="runGems">0</span></div>
       <div class="hud-item" id="hudLevel">Nv <span id="levelNum">1</span> · Ola <span id="waveNum">1</span>/<span id="waveMax">3</span></div>
       <div class="hud-item" id="hudLives"><span class="hud-icon">❤</span><span id="lives">16</span></div>
+      <button class="hud-item" id="hudSound" onclick="toggleSound()" style="cursor:pointer;border:none">🔊</button>
       <div class="speed-group" id="speedGroup">
         <button class="speed-btn selected" data-speed="1" onclick="setGameSpeed(1, this)">x1</button>
         <button class="speed-btn" data-speed="2" onclick="setGameSpeed(2, this)">x2</button>
@@ -596,6 +598,52 @@
       saveMeta();
       refreshGemCounters();
       renderUpgradeShop();
+    };
+
+    /* =========================================================
+       0b. SONIDO (Web Audio sintetizado, sin archivos externos)
+       ========================================================= */
+    var soundOn = (function () { try { return localStorage.getItem('rushRoyaleRogue_sound') !== '0'; } catch (e) { return true; } })();
+    var _actx = null;
+    function actx() {
+      if (typeof window === 'undefined') return null;
+      var AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return null;
+      if (!_actx) { try { _actx = new AC(); } catch (e) { return null; } }
+      if (_actx.state === 'suspended') { try { _actx.resume(); } catch (e) {} }
+      return _actx;
+    }
+    function tone(freq, startAt, dur, type, gain) {
+      if (!soundOn) return;
+      var ctx2 = actx();
+      if (!ctx2) return;
+      var osc = ctx2.createOscillator(), g = ctx2.createGain();
+      osc.type = type || 'sine'; osc.frequency.value = freq;
+      var t0 = ctx2.currentTime + (startAt || 0);
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.exponentialRampToValueAtTime(gain || 0.18, t0 + 0.015);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+      osc.connect(g); g.connect(ctx2.destination);
+      osc.start(t0); osc.stop(t0 + dur + 0.05);
+    }
+    function sfxShoot(towerType) {
+      var f = { fire: 320, frost: 500, nature: 420, electric: 700, venom: 260, sniper: 180, cannon: 90, arcane: 600, wind: 450 }[towerType] || 400;
+      tone(f, 0, 0.08, towerType === 'sniper' || towerType === 'cannon' ? 'square' : 'triangle', 0.06);
+    }
+    function sfxDeath(isBoss) {
+      tone(isBoss ? 140 : 220, 0, 0.12, 'sawtooth', isBoss ? 0.16 : 0.08);
+      tone((isBoss ? 100 : 150), 0.06, 0.1, 'sawtooth', isBoss ? 0.12 : 0.05);
+    }
+    function sfxHit() { tone(700, 0, 0.05, 'square', 0.04); }
+    function sfxWaveStart() { [440, 550, 660].forEach(function (f, i) { tone(f, i * 0.07, 0.18, 'triangle', 0.12); }); }
+    function sfxLevelUp() { [523, 659, 784, 1046].forEach(function (f, i) { tone(f, i * 0.08, 0.3, 'triangle', 0.14); }); }
+    function sfxGameOver() { [300, 250, 200, 150].forEach(function (f, i) { tone(f, i * 0.15, 0.35, 'sawtooth', 0.14); }); }
+    window.toggleSound = function () {
+      soundOn = !soundOn;
+      try { localStorage.setItem('rushRoyaleRogue_sound', soundOn ? '1' : '0'); } catch (e) {}
+      var el = document.getElementById('hudSound');
+      if (el) el.textContent = soundOn ? '🔊' : '🔇';
+      if (soundOn) sfxHit();
     };
 
     /* =========================================================
@@ -1361,10 +1409,12 @@
       spawnParticles(e.x, e.y, e.def.color, e.isBoss ? 26 : e.isElite ? 16 : 9, e.isBoss ? 160 : 110);
       var reward = LEVEL_CONFIGS[game.level - 1].reward * (e.isBoss ? 6 : e.isElite ? 2 : 1);
       game.mana = Math.min(MAX_MANA, game.mana + reward);
+      sfxDeath(e.isBoss);
     }
     Tower.prototype.shoot = function (target) {
       game.shots.push({ x1: this.x, y1: this.y, x2: target.x, y2: target.y, color: this.def.color2, life: 0.14, width: this.type === 'sniper' ? 3 : 2 });
       spawnParticles(target.x, target.y, this.def.color2, 4, 60);
+      sfxShoot(this.type);
 
       if (this.type === 'electric') {
         var hitSet = [target];
@@ -1754,6 +1804,7 @@
       game.towers.push(new Tower(tile.col, tile.row, type));
       game.selectedPlacedTower = null;
       updateUI();
+      saveRun();
     }
 
     function showUpgradePanel(tower) {
@@ -1778,6 +1829,7 @@
       tower.evolve();
       updateUI();
       showUpgradePanel(tower);
+      saveRun();
     };
     window.sellSelectedTower = function () {
       var tower = game.selectedPlacedTower;
@@ -1787,6 +1839,7 @@
       game.selectedPlacedTower = null;
       document.getElementById('panelInfo').innerHTML = 'Torre vendida.';
       updateUI();
+      saveRun();
     };
 
     canvas.addEventListener('click', function (e) { handleTap(e.clientX, e.clientY); });
@@ -1798,6 +1851,7 @@
       game.selectedPlacedTower = null;
       game.bossSpawnedThisWave = false;
       document.getElementById('startBtn').disabled = true;
+      sfxWaveStart();
 
       var cfg = LEVEL_CONFIGS[game.level - 1];
       var laneMult = grid.lanes.length > 1 ? TWO_LANE_ENEMY_MULT : 1;
@@ -1826,10 +1880,12 @@
        ========================================================= */
     var lastTs = 0;
     var lastLives = game.lives;
+    setInterval(saveRun, 5000);
 
     function endRun(won) {
       if (game.ended) return;
       game.ended = true;
+      clearSavedRun();
       var earned = Math.round((game.level * 3 + game.wave) * (1 + metaUpgradeLevel('gems') * 0.1));
       meta.gems += earned;
       saveMeta();
@@ -1907,17 +1963,21 @@
               buildTowerRow();
               showBigBanner('¡Nivel ' + game.level + '!');
               showToast('¡Nivel ' + game.level + '!');
+              sfxLevelUp();
             } else {
               showBigBanner('¡VICTORIA!');
+              sfxLevelUp();
               setTimeout(function () { endRun(true); }, 1200);
             }
           }
           document.getElementById('startBtn').disabled = false;
+          saveRun();
         }
 
         if (game.lives <= 0) {
           game.lives = 0;
           showBigBanner('GAME OVER');
+          sfxGameOver();
           game.enemiesToSpawn = 0;
           game.isWaveActive = false;
           setTimeout(function () { endRun(false); }, 1200);
@@ -1990,8 +2050,10 @@
     renderAdventureLevels();
 
     var gameStarted = false;
+    var currentOpts = {};
     window.startGame = function (opts) {
       opts = opts || {};
+      currentOpts = opts;
       showScreen('gameScreen');
       document.getElementById('endOverlay').hidden = true;
       game.ended = false;
@@ -2016,11 +2078,86 @@
       buildTowerRow();
       selectTower('fire', document.querySelector('.tower-chip[data-tower="fire"]'));
       updateUI();
+      clearSavedRun();
       if (!gameStarted) {
         gameStarted = true;
         requestAnimationFrame(tick);
       }
     };
+
+    /* =========================================================
+       12. GUARDADO A MEDIAS (localStorage)
+       ========================================================= */
+    // Solo se guarda ENTRE olas (nunca con una en marcha): así nunca hay
+    // que reconstruir enemigos a medio camino, solo el tablero, tus
+    // torres y tu progreso -- al continuar, retomas justo antes de pulsar
+    // "Iniciar Ola" de la ola guardada. Se guarda el tablero entero (no
+    // solo la semilla) porque la Partida aleatoria no es reproducible, y
+    // así funciona igual para Aventura y para aleatoria con el mismo código.
+    var TD_SAVE_KEY = 'rushRoyaleRogue_save_v1';
+    function saveRun() {
+      if (!grid || game.ended || game.isWaveActive) return;
+      try {
+        var data = {
+          opts: currentOpts, level: game.level, wave: game.wave,
+          lives: game.lives, mana: game.mana, runGems: game.runGems,
+          towers: game.towers.map(function (t) { return { col: t.col, row: t.row, type: t.type, level: t.level, totalSpentMana: t.totalSpentMana }; }),
+          grid: { cols: grid.cols, rows: grid.rows, vertical: grid.vertical, decor: grid.decor, lanes: grid.lanes.map(function (l) { return { pathCells: l.pathCells }; }) }
+        };
+        localStorage.setItem(TD_SAVE_KEY, JSON.stringify(data));
+      } catch (e) {}
+    }
+    function clearSavedRun() { try { localStorage.removeItem(TD_SAVE_KEY); } catch (e) {} }
+    function loadSavedRun() {
+      try {
+        var raw = localStorage.getItem(TD_SAVE_KEY);
+        return raw ? JSON.parse(raw) : null;
+      } catch (e) { return null; }
+    }
+    function buildGridFromSave(saved) {
+      var pathSet = {};
+      saved.lanes.forEach(function (lane) { lane.pathCells.forEach(function (c) { pathSet[key(c.col, c.row)] = true; }); });
+      grid = {
+        cols: saved.cols, rows: saved.rows, vertical: saved.vertical,
+        lanes: saved.lanes.map(function (l) { return { pathCells: l.pathCells, waypoints: [] }; }),
+        pathSet: pathSet, decor: saved.decor,
+        tileSize: 0, offsetX: 0, offsetY: 0
+      };
+      layoutGrid();
+    }
+    window.continueSavedGame = function () {
+      var saved = loadSavedRun();
+      if (!saved) return;
+      currentOpts = saved.opts || {};
+      showScreen('gameScreen');
+      document.getElementById('endOverlay').hidden = true;
+      game.ended = false;
+      game.level = saved.level; game.wave = saved.wave;
+      game.lives = saved.lives; game.mana = saved.mana; game.runGems = saved.runGems || 0;
+      game.enemies = []; game.particles = []; game.shots = [];
+      game.selectedPlacedTower = null;
+      game.isWaveActive = false;
+      buildGridFromSave(saved.grid);
+      game.towers = saved.towers.map(function (t) {
+        var tw = new Tower(t.col, t.row, t.type);
+        tw.level = t.level; tw.totalSpentMana = t.totalSpentMana;
+        for (var i = 1; i < t.level; i++) { tw.damage *= 1.32; tw.rangeTiles *= 1.06; tw.speed *= 1.12; }
+        return tw;
+      });
+      buildTowerRow();
+      selectTower('fire', document.querySelector('.tower-chip[data-tower="fire"]'));
+      updateUI();
+      if (!gameStarted) {
+        gameStarted = true;
+        requestAnimationFrame(tick);
+      }
+    };
+    (function () {
+      var el = document.getElementById('continueBtn');
+      var hudSoundEl = document.getElementById('hudSound');
+      if (hudSoundEl) hudSoundEl.textContent = soundOn ? '🔊' : '🔇';
+      if (el && loadSavedRun()) el.hidden = false;
+    })();
   })();
   </script>
 </body>
