@@ -637,12 +637,27 @@
         name: 'Francotirador', symbol: '🎯', color: '#2c3e6b', color2: '#e94560',
         damage: 55, rangeTiles: 4.2, speed: 0.35, manaCost: 70,
         desc: 'Muy lento, pero pega muy fuerte a distancia.', antiAir: false, shape: 'sniper'
+      },
+      cannon: {
+        name: 'Cañón', symbol: '💣', color: '#6b5b45', color2: '#ff8f3c',
+        damage: 20, rangeTiles: 2.1, speed: 0.55, manaCost: 65,
+        desc: 'Explota en área: daña a todos los que estén cerca del impacto.', antiAir: false, shape: 'cannon', splashTiles: 1.1
+      },
+      arcane: {
+        name: 'Arcano', symbol: '🔮', color: '#3d2a6b', color2: '#c9a2ff',
+        damage: 6, rangeTiles: 2.6, speed: 0.85, manaCost: 68,
+        desc: 'Maldice al objetivo: recibe un 30% más de daño de TODAS las torres durante unos segundos.', antiAir: true, shape: 'arcane', curse: true
+      },
+      wind: {
+        name: 'Viento', symbol: '🌪️', color: '#3aa6a6', color2: '#eaffff',
+        damage: 3, rangeTiles: 2.4, speed: 1.0, manaCost: 58,
+        desc: 'Empuja al enemigo hacia atrás en su camino. Alcanza a voladores.', antiAir: true, shape: 'wind', knockback: 0.55
       }
     };
-    var TOWER_ORDER = ['fire', 'frost', 'nature', 'electric', 'venom', 'sniper'];
+    var TOWER_ORDER = ['fire', 'frost', 'nature', 'electric', 'venom', 'sniper', 'cannon', 'arcane', 'wind'];
     // Se desbloquean progresivamente (nivel de partida en el que aparecen
-    // en la barra), para no abrumar con 6 torres desde el primer segundo.
-    var TOWER_UNLOCK_LEVEL = { fire: 1, frost: 1, nature: 2, electric: 3, venom: 4, sniper: 5 };
+    // en la barra), para no abrumar con 9 torres desde el primer segundo.
+    var TOWER_UNLOCK_LEVEL = { fire: 1, frost: 1, nature: 2, electric: 3, venom: 4, sniper: 5, cannon: 6, arcane: 7, wind: 8 };
 
     /* =========================================================
        CONFIG: ENEMIGOS
@@ -657,8 +672,16 @@
       brute:   { name: 'Bruto',    shape: 'brute',   color: '#c9622b', healthMult: 1.9,  speedMult: 0.75, flying: false, armor: 0.3, healAura: 0, minLevel: 2 },
       bat:     { name: 'Murciélago', shape: 'bat',   color: '#b57bff', healthMult: 0.55, speedMult: 1.6,  flying: true,  armor: 0,   healAura: 0, minLevel: 3 },
       healer:  { name: 'Curandero', shape: 'healer', color: '#5cff9e', healthMult: 1.1,  speedMult: 0.9,  flying: false, armor: 0,   healAura: 5, minLevel: 4 },
+      golem:   { name: 'Gólem',    shape: 'golem',   color: '#8a8a9e', healthMult: 3.4,  speedMult: 0.55, flying: false, armor: 0.45, healAura: 0, minLevel: 6 },
+      shade:   { name: 'Sombra',   shape: 'shade',   color: '#4a2f6b', healthMult: 0.9,  speedMult: 1.3,  flying: false, armor: 0,   healAura: 0, minLevel: 5, physicalResist: 0.45 },
+      rusher:  { name: 'Corredor', shape: 'rusher',  color: '#ffcf4d', healthMult: 0.4,  speedMult: 2.3,  flying: false, armor: 0,   healAura: 0, minLevel: 5 },
       boss:    { name: 'Jefe',     shape: 'boss',    color: '#ff2e63', healthMult: 9,    speedMult: 0.7,  flying: false, armor: 0.15, healAura: 0, minLevel: 1 }
     };
+    // Tipos "físicos" a efectos de la resistencia de la Sombra (physicalResist):
+    // golpe directo de metal/fuego/hielo/cañón/francotirador. Rayo, veneno y
+    // arcano se consideran "mágicos" y la atraviesan sin penalización -- otro
+    // motivo de verdad para variar el arsenal, no solo estética.
+    var PHYSICAL_TOWER_TYPES = { fire: true, frost: true, nature: true, sniper: true, cannon: true, wind: true };
 
     // Progresión: 8 niveles, con más variedad de enemigos cuanto más
     // avanzas (weightedMix). La última ola de cada nivel añade siempre 1
@@ -668,10 +691,10 @@
       { enemies: 11, health: 45,  speed: 1.15, reward: 10, spawnMs: 820, mix: ['slime', 'goblin'] },
       { enemies: 14, health: 62,  speed: 1.3,  reward: 11, spawnMs: 760, mix: ['slime', 'goblin', 'brute'] },
       { enemies: 18, health: 84,  speed: 1.5,  reward: 12, spawnMs: 690, mix: ['goblin', 'brute', 'bat'] },
-      { enemies: 22, health: 112, speed: 1.7,  reward: 13, spawnMs: 620, mix: ['goblin', 'brute', 'bat', 'healer'] },
-      { enemies: 26, health: 145, speed: 1.85, reward: 15, spawnMs: 560, mix: ['brute', 'bat', 'healer'] },
-      { enemies: 30, health: 185, speed: 2.0,  reward: 17, spawnMs: 510, mix: ['brute', 'bat', 'healer', 'goblin'] },
-      { enemies: 34, health: 230, speed: 2.15, reward: 20, spawnMs: 470, mix: ['brute', 'bat', 'healer'] }
+      { enemies: 22, health: 112, speed: 1.7,  reward: 13, spawnMs: 620, mix: ['goblin', 'brute', 'bat', 'healer', 'shade', 'rusher'] },
+      { enemies: 26, health: 145, speed: 1.85, reward: 15, spawnMs: 560, mix: ['brute', 'bat', 'healer', 'shade', 'rusher', 'golem'] },
+      { enemies: 30, health: 185, speed: 2.0,  reward: 17, spawnMs: 510, mix: ['brute', 'bat', 'healer', 'goblin', 'shade', 'golem'] },
+      { enemies: 34, health: 230, speed: 2.15, reward: 20, spawnMs: 470, mix: ['brute', 'bat', 'healer', 'shade', 'rusher', 'golem'] }
     ];
 
     var ELITE_EVERY = 6;
@@ -1018,6 +1041,8 @@
       this.armor = def.armor;
       this.poisonStacks = 0;
       this.poisonTimer = 0;
+      this.curseUntil = 0;
+      this.knockbackCooldown = 0;
       this.bobPhase = Math.random() * Math.PI * 2;
       var lane = grid.lanes[this.laneIndex];
       var p = tileCenter(lane.pathCells[0].col, lane.pathCells[0].row);
@@ -1039,6 +1064,7 @@
       this.x = a.x + (b.x - a.x) * this.segT;
       this.y = a.y + (b.y - a.y) * this.segT;
       this.slowFactor = Math.min(1, this.slowFactor + dt * 0.6);
+      if (this.knockbackCooldown > 0) this.knockbackCooldown -= dt;
 
       // Veneno: tic cada 0.5s, escala con las cargas acumuladas.
       if (this.poisonStacks > 0) {
@@ -1063,13 +1089,36 @@
     Enemy.prototype.reachedEnd = function () {
       return this.segIndex >= grid.lanes[this.laneIndex].waypoints.length - 1;
     };
-    Enemy.prototype.takeDamage = function (dmg) {
+    Enemy.prototype.takeDamage = function (dmg, towerType) {
       var actual = dmg * (1 - this.armor);
+      // Sombra: resiste el daño "físico" (fuego/hielo/bosque/cañón/francotirador/viento).
+      if (this.def.physicalResist && towerType && PHYSICAL_TOWER_TYPES[towerType]) actual *= (1 - this.def.physicalResist);
+      // Maldición del Arcano: +30% de daño de CUALQUIER torre mientras dure.
+      if (this.curseUntil > performance.now()) actual *= 1.3;
       this.health -= actual;
       return this.health <= 0;
     };
     Enemy.prototype.applySlow = function (factor) {
       this.slowFactor = Math.max(0.35, this.slowFactor * factor);
+    };
+    Enemy.prototype.applyCurse = function (ms) {
+      this.curseUntil = Math.max(this.curseUntil, performance.now() + ms);
+    };
+    // Empuje del Viento: retrocede una fracción de su avance en el carril
+    // (segT/segIndex) -- con cooldown propio para que no se quede clavado
+    // si hay varias torres de Viento apuntándole a la vez.
+    Enemy.prototype.applyKnockback = function (frac) {
+      if (this.knockbackCooldown > 0) return;
+      this.knockbackCooldown = 0.4;
+      var total = this.segIndex + this.segT;
+      total = Math.max(0, total - frac);
+      this.segIndex = Math.floor(total);
+      this.segT = total - this.segIndex;
+      var wps = grid.lanes[this.laneIndex].waypoints;
+      var a = wps[this.segIndex];
+      var b = wps[Math.min(this.segIndex + 1, wps.length - 1)];
+      this.x = a.x + (b.x - a.x) * this.segT;
+      this.y = a.y + (b.y - a.y) * this.segT;
     };
     Enemy.prototype.applyPoison = function () {
       this.poisonStacks = Math.min(5, this.poisonStacks + 1);
@@ -1151,11 +1200,53 @@
         ctx.fillStyle = col;
         ctx.beginPath(); ctx.arc(0, 0, size * 0.34, 0, Math.PI * 2); ctx.fill();
         drawEyes(size * 0.15, -size * 0.02, size * 0.075, '#fff700');
+      } else if (e.def.shape === 'golem') {
+        ctx.fillStyle = shadeColor(col, -25);
+        roundRect(-size * 0.4, -size * 0.15, size * 0.8, size * 0.55, size * 0.08);
+        ctx.fill();
+        ctx.fillStyle = col;
+        var chunks = [[-size * 0.24, -size * 0.32, size * 0.22], [size * 0.02, -size * 0.42, size * 0.26], [size * 0.28, -size * 0.3, size * 0.2]];
+        chunks.forEach(function (c) { ctx.beginPath(); ctx.arc(c[0], c[1], c[2], 0, Math.PI * 2); ctx.fill(); });
+        ctx.strokeStyle = 'rgba(0,0,0,0.3)'; ctx.lineWidth = size * 0.025;
+        ctx.beginPath(); ctx.moveTo(-size * 0.3, -size * 0.05); ctx.lineTo(-size * 0.1, size * 0.15); ctx.moveTo(size * 0.1, -size * 0.1); ctx.lineTo(size * 0.25, size * 0.1); ctx.stroke();
+        drawEyes(size * 0.1, -size * 0.32, size * 0.045, '#ffcf4d');
+      } else if (e.def.shape === 'shade') {
+        var shadeGrad = ctx.createRadialGradient(0, -size * 0.1, size * 0.05, 0, 0, size * 0.5);
+        shadeGrad.addColorStop(0, shadeColor(col, 25)); shadeGrad.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.globalAlpha = 0.85;
+        ctx.fillStyle = shadeGrad;
+        ctx.beginPath();
+        ctx.moveTo(0, -size * 0.42);
+        ctx.quadraticCurveTo(size * 0.4, -size * 0.1, size * 0.3, size * 0.3);
+        ctx.lineTo(size * 0.14, size * 0.16); ctx.lineTo(0, size * 0.36); ctx.lineTo(-size * 0.14, size * 0.16); ctx.lineTo(-size * 0.3, size * 0.3);
+        ctx.quadraticCurveTo(-size * 0.4, -size * 0.1, 0, -size * 0.42);
+        ctx.closePath(); ctx.fill();
+        ctx.globalAlpha = 1;
+        drawEyes(size * 0.08, -size * 0.1, size * 0.05, '#c9a2ff');
+      } else if (e.def.shape === 'rusher') {
+        var lean = size * 0.25;
+        ctx.fillStyle = col;
+        ctx.beginPath();
+        ctx.moveTo(-lean, -size * 0.32);
+        ctx.lineTo(size * 0.3, 0);
+        ctx.lineTo(-lean * 0.4, size * 0.34);
+        ctx.lineTo(-size * 0.32, size * 0.1);
+        ctx.closePath(); ctx.fill();
+        ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.lineWidth = size * 0.04;
+        for (var sp = 0; sp < 3; sp++) {
+          ctx.beginPath(); ctx.moveTo(-size * 0.45 - sp * size * 0.08, -size * 0.06 + sp * size * 0.1); ctx.lineTo(-size * 0.28 - sp * size * 0.08, -size * 0.02 + sp * size * 0.1); ctx.stroke();
+        }
+        drawEyes(0, 0, size * 0.05, '#1a1a2e');
       } else {
         ctx.fillStyle = col;
         ctx.beginPath(); ctx.arc(0, 0, size * 0.35, 0, Math.PI * 2); ctx.fill();
       }
 
+      if (e.curseUntil > performance.now()) {
+        ctx.strokeStyle = 'rgba(201,162,255,0.85)';
+        ctx.lineWidth = size * 0.05;
+        ctx.beginPath(); ctx.arc(0, 0, size * 0.56, 0, Math.PI * 2); ctx.stroke();
+      }
       if (e.poisonStacks > 0) {
         ctx.fillStyle = 'rgba(92,255,158,' + Math.min(0.5, 0.15 + e.poisonStacks * 0.07) + ')';
         ctx.beginPath(); ctx.arc(0, 0, size * 0.5, 0, Math.PI * 2); ctx.fill();
@@ -1292,16 +1383,34 @@
         }
         hitSet.forEach(function (e, idx) {
           var dmg = this.damage * (idx === 0 ? 1 : 0.6);
-          if (e.takeDamage(dmg)) killEnemy(e);
+          if (e.takeDamage(dmg, this.type)) killEnemy(e);
         }, this);
+      } else if (this.type === 'cannon') {
+        // Cañón: daña al objetivo y a todo lo que esté dentro del radio de
+        // salpicadura alrededor del punto de impacto.
+        var splashR = this.def.splashTiles * grid.tileSize;
+        var hitAny = [];
+        game.enemies.forEach(function (e) {
+          if (!this.canHit(e)) return;
+          if (Math.hypot(e.x - target.x, e.y - target.y) <= splashR) hitAny.push(e);
+        }, this);
+        spawnParticles(target.x, target.y, this.def.color2, 10, 140);
+        hitAny.forEach(function (e) { if (e.takeDamage(this.damage, this.type)) killEnemy(e); }, this);
+      } else if (this.type === 'arcane') {
+        target.applyCurse(2600);
+        spawnParticles(target.x, target.y, this.def.color2, 6, 50);
+        if (target.takeDamage(this.damage, this.type)) killEnemy(target);
+      } else if (this.type === 'wind') {
+        target.applyKnockback(this.def.knockback);
+        if (target.takeDamage(this.damage, this.type)) killEnemy(target);
       } else if (this.type === 'sniper' || this.type === 'fire' || this.type === 'frost') {
-        if (target.takeDamage(this.damage)) killEnemy(target);
+        if (target.takeDamage(this.damage, this.type)) killEnemy(target);
         if (this.type === 'frost') target.applySlow(0.55);
       } else if (this.type === 'venom') {
-        if (target.takeDamage(this.damage)) killEnemy(target);
+        if (target.takeDamage(this.damage, this.type)) killEnemy(target);
         else target.applyPoison();
       } else if (this.type === 'nature') {
-        if (target.takeDamage(this.damage)) killEnemy(target);
+        if (target.takeDamage(this.damage, this.type)) killEnemy(target);
       }
       updateUI();
     };
@@ -1393,6 +1502,38 @@
         ctx.fillRect(-s * 0.07, -s * 0.7, s * 0.14, s * 0.7);
         ctx.fillStyle = t.def.color2;
         ctx.beginPath(); ctx.arc(0, -s * 0.05, s * 0.16, 0, Math.PI * 2); ctx.fill();
+      } else if (t.def.shape === 'cannon') {
+        ctx.fillStyle = shadeColor(t.color, -15);
+        ctx.beginPath(); ctx.arc(0, s * 0.02, s * 0.3, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = shadeColor(t.color, 20);
+        ctx.fillRect(-s * 0.1, -s * 0.55, s * 0.2, s * 0.55);
+        ctx.fillStyle = '#2a2a2a';
+        ctx.beginPath(); ctx.arc(0, -s * 0.55, s * 0.13, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = t.def.color2;
+        ctx.beginPath(); ctx.arc(0, 0, s * 0.1, 0, Math.PI * 2); ctx.fill();
+      } else if (t.def.shape === 'arcane') {
+        var arcGrad = ctx.createRadialGradient(0, -s * 0.2, s * 0.03, 0, -s * 0.2, s * 0.42);
+        arcGrad.addColorStop(0, t.def.color2); arcGrad.addColorStop(1, t.color);
+        ctx.fillStyle = arcGrad;
+        drawPoly(0, -s * 0.1, s * 0.36, s * 0.6, 3);
+        ctx.strokeStyle = t.def.color2; ctx.lineWidth = s * 0.03;
+        ctx.beginPath(); ctx.arc(0, -s * 0.22, s * 0.14, 0, Math.PI * 2); ctx.stroke();
+        ctx.fillStyle = t.def.color2;
+        for (var orb = 0; orb < 3; orb++) {
+          var oAng = (orb / 3) * Math.PI * 2 + performance.now() / 400;
+          ctx.beginPath(); ctx.arc(Math.cos(oAng) * s * 0.28, -s * 0.22 + Math.sin(oAng) * s * 0.28, s * 0.035, 0, Math.PI * 2); ctx.fill();
+        }
+      } else if (t.def.shape === 'wind') {
+        ctx.fillStyle = shadeColor(t.color, -15);
+        drawPoly(0, s * 0.02, s * 0.3, s * 0.45, 8);
+        ctx.strokeStyle = t.def.color2; ctx.lineWidth = s * 0.06; ctx.lineCap = 'round';
+        [0, 1, 2].forEach(function (i3) {
+          var yy = -s * 0.08 - i3 * s * 0.12;
+          ctx.beginPath();
+          ctx.moveTo(-s * (0.32 - i3 * 0.06), yy);
+          ctx.quadraticCurveTo(s * 0.1, yy - s * 0.06, s * (0.32 - i3 * 0.1), yy);
+          ctx.stroke();
+        });
       }
       ctx.restore();
 
