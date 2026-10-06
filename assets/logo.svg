@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 210">
+  <defs>
+    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fff3b0"/><stop offset="0.45" stop-color="#ffd166"/><stop offset="1" stop-color="#e08a00"/>
+    </linearGradient>
+    <linearGradient id="red" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ff7a94"/><stop offset="1" stop-color="#b8233f"/>
+    </linearGradient>
+    <linearGradient id="blue" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3a5aa8"/><stop offset="1" stop-color="#16213e"/>
+    </linearGradient>
+    <linearGradient id="ribbon" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#7c5cff"/><stop offset="1" stop-color="#4b2fc0"/>
+    </linearGradient>
+  </defs>
+  <!-- espadas cruzadas -->
+  <g stroke="#1a1a2e" stroke-width="4" stroke-linejoin="round">
+    <path d="M70 40 L180 150 L170 160 L60 50 Z" fill="#dfe6f2"/>
+    <path d="M330 40 L220 150 L230 160 L340 50 Z" fill="#dfe6f2"/>
+    <rect x="160" y="148" width="34" height="10" rx="4" transform="rotate(45 177 153)" fill="#8b5a2b"/>
+    <rect x="206" y="148" width="34" height="10" rx="4" transform="rotate(-45 223 153)" fill="#8b5a2b"/>
+  </g>
+  <!-- escudo -->
+  <path d="M200 18 L262 38 L256 104 Q248 140 200 160 Q152 140 144 104 L138 38 Z" fill="url(#blue)" stroke="#1a1a2e" stroke-width="6"/>
+  <path d="M200 30 L250 46 L245 102 Q238 130 200 147 Q162 130 155 102 L150 46 Z" fill="none" stroke="url(#gold)" stroke-width="4"/>
+  <!-- corona -->
+  <path d="M168 92 L164 58 L182 74 L200 48 L218 74 L236 58 L232 92 Z" fill="url(#gold)" stroke="#1a1a2e" stroke-width="4" stroke-linejoin="round"/>
+  <circle cx="200" cy="80" r="6" fill="#e94560" stroke="#1a1a2e" stroke-width="2"/>
+  <circle cx="164" cy="56" r="4" fill="#ffd166" stroke="#1a1a2e" stroke-width="2"/>
+  <circle cx="236" cy="56" r="4" fill="#ffd166" stroke="#1a1a2e" stroke-width="2"/>
+  <circle cx="200" cy="46" r="4" fill="#ffd166" stroke="#1a1a2e" stroke-width="2"/>
+  <rect x="168" y="92" width="64" height="10" rx="3" fill="url(#gold)" stroke="#1a1a2e" stroke-width="3"/>
+  <!-- texto principal -->
+  <text x="200" y="150" text-anchor="middle" font-family="'Arial Black', Impact, 'Segoe UI', sans-serif" font-weight="900" font-size="54" textLength="372" lengthAdjust="spacingAndGlyphs" fill="url(#gold)" stroke="#1a1a2e" stroke-width="10" paint-order="stroke" letter-spacing="1">RUSH ROYALE</text>
+  <!-- cinta -->
+  <path d="M96 166 L304 166 L294 182 L304 198 L96 198 L106 182 Z" fill="url(#ribbon)" stroke="#1a1a2e" stroke-width="4" stroke-linejoin="round"/>
+  <text x="200" y="191" text-anchor="middle" font-family="'Arial Black', Impact, 'Segoe UI', sans-serif" font-weight="900" font-size="21" fill="#ffffff" stroke="#1a1a2e" stroke-width="4" paint-order="stroke" letter-spacing="6">ROGUELIKE</text>
+</svg>

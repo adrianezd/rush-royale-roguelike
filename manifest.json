@@ -1,10 +1,10 @@
 {
-  "name": "Rush Royale Tower Defense",
-  "short_name": "Rush Royale TD",
-  "description": "Tower defense individual arcade roguelike",
+  "name": "Rush Royale Roguelike",
+  "short_name": "Rush Royale",
+  "description": "Tower defense roguelike con héroes, cartas, cofres, jefes y siete modos de juego",
   "start_url": "/rush-royale-roguelike/",
   "display": "fullscreen",
-  "background_color": "#1a1a2e",
+  "background_color": "#0a0e1a",
   "theme_color": "#e94560",
-  "icons": []
+  "icons": [{ "src": "favicon.svg", "sizes": "any", "type": "image/svg+xml" }]
 }

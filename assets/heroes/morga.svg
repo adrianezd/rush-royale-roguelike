@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="35%" r="70%"><stop offset="0" stop-color="#d9b8ff"/><stop offset="1" stop-color="#3a1a66"/></radialGradient>
+    <clipPath id="c"><circle cx="60" cy="60" r="60"/></clipPath>
+  </defs>
+  <circle cx="60" cy="60" r="60" fill="url(#bg)"/>
+  <g clip-path="url(#c)">
+    <g opacity="0.18" fill="#fff"><path d="M60 40 L10 -10 L30 -10 Z"/><path d="M60 40 L110 -10 L90 -10 Z"/><path d="M60 40 L-10 30 L-10 50 Z"/><path d="M60 40 L130 30 L130 50 Z"/></g>
+
+    <path d="M10 124 Q14 84 60 80 Q106 84 110 124 Z" fill="#2a1640" stroke="#1a1a2e" stroke-width="2.5" stroke-linejoin="round"/>
+    <path d="M24 70 Q22 20 60 14 Q98 20 96 70 L92 100 L28 100 Z" fill="#3d2266" stroke="#1a1a2e" stroke-width="2.5" stroke-linejoin="round"/>
+    <ellipse cx="60" cy="60" rx="20" ry="23" fill="#d8d0e8" stroke="#1a1a2e" stroke-width="2.5" stroke-linejoin="round"/>
+    <path d="M40 58 Q42 38 60 36 Q78 38 80 58 Q70 48 60 52 Q50 48 40 58 Z" fill="#1d1033" stroke="#1a1a2e" stroke-width="2.5" stroke-linejoin="round"/>
+    <ellipse cx="51" cy="62" rx="4.5" ry="4" fill="#1a1a2e"/><ellipse cx="69" cy="62" rx="4.5" ry="4" fill="#1a1a2e"/>
+    <circle cx="51" cy="62" r="2.4" fill="#5cff9e"/><circle cx="69" cy="62" r="2.4" fill="#5cff9e"/>
+    <path d="M46 56 L55 58 M74 56 L65 58" stroke="#1a1a2e" stroke-width="2.5" stroke-linecap="round"/>
+    <path d="M54 74 Q60 71 66 74" fill="none" stroke="#6b2a6b" stroke-width="2.5" stroke-linecap="round"/>
+    <path d="M44 84 L60 96 L76 84" fill="none" stroke="#b06bff" stroke-width="3"/>
+    <circle cx="60" cy="102" r="8" fill="#efe6d2" stroke="#1a1a2e" stroke-width="2.5" stroke-linejoin="round"/>
+    <circle cx="57" cy="101" r="2" fill="#1a1a2e"/><circle cx="63" cy="101" r="2" fill="#1a1a2e"/><path d="M57 106 L63 106" stroke="#1a1a2e" stroke-width="1.5"/>
+    <g fill="#5cff9e" opacity="0.85"><circle cx="18" cy="40" r="3"/><circle cx="102" cy="34" r="4"/><circle cx="96" cy="78" r="2"/><circle cx="22" cy="86" r="2.5"/></g>
+  </g>
+</svg>
