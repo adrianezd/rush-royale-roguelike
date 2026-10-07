@@ -23,6 +23,7 @@
     else if (e.key === 'Escape' || e.key === 'p') togglePause();
     else if (e.key === 'h' || e.key === 'q') useHero();
     else if (e.key === 'i' && game.fusion) summonTower();
+    else if (e.key === 'u' && !game.fusion) quickUpgrade();
     else if (e.key >= '1' && e.key <= '5') {
       var t = game.deck[+e.key - 1];
       if (t) game.fusion ? powerUpType(t) : selectTower(t);

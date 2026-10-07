@@ -492,6 +492,11 @@ Tower.prototype.draw = function (isSelected, now, highlight) {
   if (sc !== 1) { ctx.save(); ctx.translate(this.x, this.y); ctx.scale(sc, sc); ctx.translate(-this.x, -this.y); }
   drawTowerShape(ctx, this, ts, now);
   if (sc !== 1) ctx.restore();
+  if (!game.fusion) {
+    drawLevelPips(this, ts);
+    if (this.level < TOWER_MAX_LEVEL && game.mana >= this.upgradeCost()) drawUpgradeBadge(this, ts, now);
+    return;
+  }
   if (game.fusion || this.level > 1) {
     ctx.font = 'bold ' + Math.round(ts * 0.22) + 'px Arial';
     ctx.textAlign = 'center';
@@ -504,3 +509,49 @@ Tower.prototype.draw = function (isSelected, now, highlight) {
     ctx.fillText(lbl, lx, ly);
   }
 };
+
+/* Nivel de la torre como estrellitas bajo la casilla. */
+function drawLevelPips(t, ts) {
+  var n = t.level;
+  var r = Math.max(2.2, ts * 0.055);
+  var gap = r * 2.6;
+  var x0 = t.x - (n - 1) * gap / 2;
+  var y = grid.offsetY + t.row * ts + ts - r * 1.6;
+  for (var i = 0; i < n; i++) {
+    ctx.beginPath();
+    ctx.arc(x0 + i * gap, y, r, 0, Math.PI * 2);
+    ctx.fillStyle = n >= TOWER_MAX_LEVEL ? '#ff9ff3' : '#ffd166';
+    ctx.fill();
+    ctx.lineWidth = 1.2; ctx.strokeStyle = 'rgba(0,0,0,0.7)'; ctx.stroke();
+  }
+}
+/* Flecha verde que late cuando hay maná para mejorar la torre. */
+function drawUpgradeBadge(t, ts, now) {
+  var r = Math.max(6, ts * 0.17);
+  var x = grid.offsetX + t.col * ts + ts - r * 0.9;
+  var y = grid.offsetY + t.row * ts + r * 0.9 + Math.sin(now / 180 + t.col) * ts * 0.03;
+  ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2);
+  ctx.fillStyle = '#2ecc71'; ctx.fill();
+  ctx.lineWidth = 1.5; ctx.strokeStyle = '#eafff2'; ctx.stroke();
+  ctx.fillStyle = '#fff';
+  ctx.beginPath();
+  ctx.moveTo(x, y - r * 0.55); ctx.lineTo(x + r * 0.5, y + r * 0.05); ctx.lineTo(x + r * 0.2, y + r * 0.05);
+  ctx.lineTo(x + r * 0.2, y + r * 0.5); ctx.lineTo(x - r * 0.2, y + r * 0.5); ctx.lineTo(x - r * 0.2, y + r * 0.05);
+  ctx.lineTo(x - r * 0.5, y + r * 0.05); ctx.closePath(); ctx.fill();
+}
+/* Etiqueta con el coste encima de la torre seleccionada. */
+function drawUpgradeCostTag(t, ts) {
+  var cost = t.upgradeCost();
+  var ok = game.mana >= cost;
+  var label = '⬆ ' + cost + ' 💧';
+  ctx.font = 'bold ' + Math.round(Math.max(11, ts * 0.24)) + 'px "Segoe UI", Arial';
+  var w = ctx.measureText(label).width + 14, h = Math.max(18, ts * 0.36);
+  var x = t.x - w / 2, y = grid.offsetY + t.row * ts - h - 4;
+  if (y < grid.offsetY) y = grid.offsetY + t.row * ts + ts + 4;
+  rrect(ctx, x, y, w, h, h / 2);
+  ctx.fillStyle = ok ? '#2ecc71' : 'rgba(30,30,40,0.9)'; ctx.fill();
+  ctx.lineWidth = 1.5; ctx.strokeStyle = ok ? '#eafff2' : '#ff8fa3'; ctx.stroke();
+  ctx.fillStyle = ok ? '#06261a' : '#ff8fa3';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(label, t.x, y + h / 2 + 1);
+}

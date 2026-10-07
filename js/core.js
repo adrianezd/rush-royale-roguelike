@@ -2,8 +2,19 @@
    NÚCLEO: versión, novedades y utilidades compartidas
    Todos los scripts son clásicos y comparten el scope global.
    ========================================================= */
-var APP_VERSION = '2.0.0';
+var APP_VERSION = '2.1.0';
 var APP_PATCH_NOTES = [
+  {
+    v: '2.1.0', fecha: '7 oct 2026', titulo: 'Torres nuevas y mejoras cómodas',
+    notas: [
+      'Todas las torres rediseñadas: cada nivel cambia el edificio (madera, piedra, almenas, mármol con banderas y obsidiana con aura y corona).',
+      'Mejorar es más fácil: toca una torre seleccionada otra vez para subirla de nivel.',
+      'Flecha verde sobre cada torre que puedes mejorar y etiqueta con el coste encima de la seleccionada.',
+      'Botón «Mejorar» que sube de nivel tu torre más barata con un solo toque (tecla U).',
+      'El maná ya no se desperdicia: el que no cabe carga la habilidad del héroe.',
+      'Más espacio para el maná (200 al empezar y +40 por nivel) y aviso cuando está lleno.'
+    ]
+  },
   {
     v: '2.0.0', fecha: '6 oct 2026', titulo: 'La gran actualización',
     notas: [

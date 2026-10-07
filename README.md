@@ -9,6 +9,7 @@ Tower defense roguelike para móvil y escritorio inspirado en Rush Royale. Fan g
 - **6 héroes** con habilidad activa y pasiva: Aria, Brann, Sylva, Volt, Morga y León.
 - **Mazo de 5 cartas**, colección con niveles permanentes y **cofres** (madera, plata, real y uno gratis al día).
 - **7 jefes** con mecánicas propias y **17 bendiciones** roguelike entre niveles.
+- Torres que cambian de aspecto en cada nivel, mejora con doble toque y botón de mejora rápida; el maná sobrante carga al héroe.
 - 8 biomas, proyectiles, críticos, números de daño, prioridad de disparo, pausa, olas automáticas.
 - Perfil con nivel de cuenta, 20 logros, guía, novedades y códigos.
 

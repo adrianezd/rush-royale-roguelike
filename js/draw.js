@@ -49,43 +49,191 @@ function drawCrown(c, x, y, w, col) {
 
 /* ---------- TORRES ---------- */
 // t: { x, y, level, aimAngle, recoil, def, color, frozen, rank }
+// La torre se construye en dos partes: el edificio (que evoluciona con el
+// nivel: madera → piedra → almenas → mármol con banderas → obsidiana con aura
+// y corona) y el arma de su tipo, que se monta encima y apunta al objetivo.
+var TOWER_TIERS = [
+  null,
+  { wall: '#8a6a45', wall2: '#5e4529', trim: '#c49a6c', h: 0.10, rim: 0 },
+  { wall: '#8b93a7', wall2: '#5c6378', trim: '#b8c0d4', h: 0.2, rim: 0 },
+  { wall: '#9aa3b8', wall2: '#626a82', trim: '#d6dcec', h: 0.3, rim: 1 },
+  { wall: '#dfe4f0', wall2: '#9aa2ba', trim: '#ffd166', h: 0.38, rim: 1, flags: true },
+  { wall: '#3d3460', wall2: '#1c1733', trim: '#ffd166', h: 0.46, rim: 1, flags: true, aura: true, crown: true, glowWin: true }
+];
+function towerTier(level) { return TOWER_TIERS[clamp(level, 1, 5)]; }
+
 function drawTowerShape(c, t, ts, now) {
-  var s = ts * (0.62 + Math.min(t.level, 7) * 0.045);
+  var lv = Math.max(1, t.level);
+  var tier = towerTier(lv);
+  var extra = Math.max(0, lv - 5); // rangos de Fusión por encima de 5
+  var s = ts * (0.66 + Math.min(lv, 7) * 0.03);
   var d = t.def;
+  var bw = s * 0.42;              // semiancho del edificio
+  var bh = s * tier.h;            // altura del edificio
+  var baseY = ts * 0.2;           // suelo
+  var topY = baseY - bh;          // tejado del edificio
   c.save();
   c.translate(t.x, t.y);
 
-  // sombra y peana
-  c.beginPath(); c.ellipse(0, ts * 0.14, s * 0.52, s * 0.22, 0, 0, Math.PI * 2);
-  c.fillStyle = 'rgba(0,0,0,0.38)'; c.fill();
-  var ped = c.createLinearGradient(0, -s * 0.1, 0, s * 0.3);
-  ped.addColorStop(0, shadeColor(t.color, 35));
-  ped.addColorStop(1, shadeColor(t.color, -45));
-  c.fillStyle = ped;
-  c.beginPath(); c.ellipse(0, ts * 0.08, s * 0.46, s * 0.2, 0, 0, Math.PI * 2); c.fill();
-
-  if (d.support) {
-    drawAlchemist(c, t, s, now);
-  } else {
+  // aura giratoria de los niveles altos
+  if (tier.aura) {
+    var ar = s * (0.62 + extra * 0.04);
+    var ag = c.createRadialGradient(0, baseY, s * 0.1, 0, baseY, ar);
+    ag.addColorStop(0, hexA(d.color2, 0.45)); ag.addColorStop(1, hexA(d.color2, 0));
+    c.fillStyle = ag;
+    c.beginPath(); c.ellipse(0, baseY, ar, ar * 0.45, 0, 0, Math.PI * 2); c.fill();
     c.save();
-    c.rotate(t.aimAngle + Math.PI / 2);
-    c.translate(0, t.recoil * s * 0.08);
-    drawTowerTop(c, t, s, now);
+    c.translate(0, baseY); c.scale(1, 0.45);
+    c.strokeStyle = hexA(d.color2, 0.85); c.lineWidth = Math.max(1.5, s * 0.03);
+    c.setLineDash([s * 0.08, s * 0.06]); c.lineDashOffset = -now / 40;
+    c.beginPath(); c.arc(0, 0, ar * 0.92, 0, Math.PI * 2); c.stroke();
+    c.setLineDash([]);
     c.restore();
   }
 
-  // marcas de nivel: estrellas doradas (rango en Fusión)
-  var pips = t.level - 1;
-  for (var i = 0; i < pips; i++) {
-    var ang = (i / Math.max(4, pips)) * Math.PI - Math.PI;
-    var px = Math.cos(ang) * s * 0.5, py = ts * 0.1 + Math.sin(ang) * s * 0.2 + s * 0.28;
-    c.fillStyle = '#ffd166';
-    c.strokeStyle = 'rgba(0,0,0,0.5)'; c.lineWidth = 1;
-    c.beginPath(); c.arc(px, py, Math.max(1.6, s * 0.055), 0, Math.PI * 2); c.fill(); c.stroke();
+  // sombra
+  c.beginPath(); c.ellipse(0, baseY + s * 0.03, bw * 1.2, bw * 0.42, 0, 0, Math.PI * 2);
+  c.fillStyle = 'rgba(0,0,0,0.4)'; c.fill();
+
+  // cimiento
+  c.fillStyle = shadeColor(tier.wall2, -15);
+  c.beginPath(); c.ellipse(0, baseY, bw * 1.08, bw * 0.38, 0, 0, Math.PI * 2); c.fill();
+
+  // muro (cilindro)
+  var wg = c.createLinearGradient(-bw, 0, bw, 0);
+  wg.addColorStop(0, tier.wall2); wg.addColorStop(0.45, tier.wall); wg.addColorStop(1, shadeColor(tier.wall2, -10));
+  c.fillStyle = wg;
+  c.beginPath();
+  c.moveTo(-bw, baseY - bw * 0.05);
+  c.lineTo(-bw, topY);
+  c.ellipse(0, topY, bw, bw * 0.34, 0, Math.PI, 0, false);
+  c.lineTo(bw, baseY - bw * 0.05);
+  c.ellipse(0, baseY - bw * 0.05, bw, bw * 0.34, 0, 0, Math.PI, false);
+  c.closePath(); c.fill();
+
+  // textura: tablas (nivel 1) o hileras de piedra
+  c.save();
+  c.clip();
+  c.strokeStyle = 'rgba(0,0,0,0.22)'; c.lineWidth = 1;
+  if (lv === 1) {
+    for (var px = -bw; px < bw; px += bw * 0.4) { c.beginPath(); c.moveTo(px, topY); c.lineTo(px, baseY + bw * 0.3); c.stroke(); }
+  } else {
+    var rowH = Math.max(3, s * 0.075);
+    for (var ry = topY + rowH, k = 0; ry < baseY + bw * 0.3; ry += rowH, k++) {
+      c.beginPath(); c.ellipse(0, ry, bw, bw * 0.34, 0, 0, Math.PI); c.stroke();
+      for (var bx = -bw + (k % 2) * bw * 0.25; bx < bw; bx += bw * 0.5) {
+        c.beginPath(); c.moveTo(bx, ry); c.lineTo(bx, ry - rowH); c.stroke();
+      }
+    }
   }
+  c.restore();
+
+  // ventana / puerta
+  if (lv >= 2) {
+    var winY = topY + bh * 0.55;
+    c.fillStyle = tier.glowWin ? hexA(d.color2, 0.6 + Math.sin(now / 300) * 0.3) : 'rgba(20,16,30,0.8)';
+    rrect(c, -bw * 0.16, winY - s * 0.06, bw * 0.32, s * 0.12, s * 0.05); c.fill();
+  }
+
+  // franja de color del tipo y ribete
+  c.strokeStyle = t.color; c.lineWidth = Math.max(2, s * 0.05);
+  c.beginPath(); c.ellipse(0, topY + bh * 0.25 + s * 0.02, bw * 1.0, bw * 0.34, 0, 0.1, Math.PI - 0.1); c.stroke();
+  if (lv >= 4) {
+    c.strokeStyle = tier.trim; c.lineWidth = Math.max(1.5, s * 0.03);
+    c.beginPath(); c.ellipse(0, baseY - bw * 0.05, bw, bw * 0.34, 0, 0.05, Math.PI - 0.05); c.stroke();
+  }
+
+  // tejado del muro
+  c.fillStyle = shadeColor(tier.wall, -8);
+  c.beginPath(); c.ellipse(0, topY, bw, bw * 0.34, 0, 0, Math.PI * 2); c.fill();
+  c.strokeStyle = tier.trim; c.lineWidth = Math.max(1.5, s * 0.035); c.stroke();
+
+  // almenas
+  if (tier.rim) {
+    var merlons = 10;
+    // primero las de atrás y luego las de delante, para que se solapen bien
+    var order = [];
+    for (var mi = 0; mi < merlons; mi++) order.push(mi);
+    order.sort(function (i, j) { return Math.sin((i + 0.5) / merlons * Math.PI * 2) - Math.sin((j + 0.5) / merlons * Math.PI * 2); });
+    for (var oi = 0; oi < merlons; oi++) {
+      var m = order[oi];
+      var ma = (m + 0.5) / merlons * Math.PI * 2;
+      var mx = Math.cos(ma) * bw * 0.9, my = topY + Math.sin(ma) * bw * 0.3;
+      c.fillStyle = m % 2 ? tier.wall : t.color;
+      c.fillRect(mx - s * 0.05, my - s * 0.11, s * 0.1, s * 0.11);
+      c.strokeStyle = 'rgba(0,0,0,0.35)'; c.lineWidth = 1;
+      c.strokeRect(mx - s * 0.05, my - s * 0.11, s * 0.1, s * 0.11);
+    }
+  }
+
+  // banderas
+  if (tier.flags) {
+    [-1, 1].forEach(function (side) {
+      var fx = side * bw * 1.02, fy = topY + s * 0.02;
+      c.strokeStyle = '#3a2a14'; c.lineWidth = Math.max(1.2, s * 0.025);
+      c.beginPath(); c.moveTo(fx, fy); c.lineTo(fx, fy - s * 0.4); c.stroke();
+      var wave = Math.sin(now / 200 + side) * s * 0.04;
+      c.fillStyle = side < 0 ? t.color : d.color2;
+      c.beginPath();
+      c.moveTo(fx, fy - s * 0.4);
+      c.quadraticCurveTo(fx + side * s * 0.12, fy - s * 0.37 + wave, fx + side * s * 0.22, fy - s * 0.33);
+      c.quadraticCurveTo(fx + side * s * 0.12, fy - s * 0.27 + wave, fx, fy - s * 0.26);
+      c.closePath(); c.fill();
+    });
+  }
+
+  // brillo bajo el arma, más intenso cuanto más nivel
+  var glowR = s * (0.22 + lv * 0.04);
+  var gg = c.createRadialGradient(0, topY, 1, 0, topY, glowR);
+  gg.addColorStop(0, hexA(d.color2, 0.15 + lv * 0.08)); gg.addColorStop(1, hexA(d.color2, 0));
+  c.fillStyle = gg;
+  c.beginPath(); c.arc(0, topY, glowR, 0, Math.PI * 2); c.fill();
+
+  // soporte metálico del arma: remaches desde el nivel 2 y gemas desde el 4
+  var ws = s * (0.78 + lv * 0.05);
+  if (lv >= 2 && !d.support) {
+    var mr = bw * 0.62;
+    c.fillStyle = shadeColor(tier.trim, -60);
+    c.beginPath(); c.ellipse(0, topY, mr, mr * 0.4, 0, 0, Math.PI * 2); c.fill();
+    c.strokeStyle = tier.trim; c.lineWidth = Math.max(1, s * 0.025); c.stroke();
+    var studs = lv >= 4 ? 6 : 4;
+    for (var st = 0; st < studs; st++) {
+      var sa2 = st / studs * Math.PI * 2 + Math.PI / studs;
+      c.fillStyle = lv >= 4 && st % 2 ? d.color2 : tier.trim;
+      c.beginPath(); c.arc(Math.cos(sa2) * mr * 0.8, topY + Math.sin(sa2) * mr * 0.32, Math.max(1.2, s * (lv >= 4 && st % 2 ? 0.035 : 0.022)), 0, Math.PI * 2); c.fill();
+    }
+  }
+
+  // arma del tipo, montada sobre el edificio
+  c.save();
+  c.translate(0, topY - s * 0.05);
+  if (d.support) {
+    drawAlchemist(c, t, ws, now);
+  } else {
+    c.rotate(t.aimAngle + Math.PI / 2);
+    c.translate(0, t.recoil * ws * 0.08);
+    drawTowerTop(c, t, ws, now);
+  }
+  c.restore();
+
+  // corona y destellos del nivel máximo
+  if (tier.crown) {
+    var cy = topY - ws * 0.6 + Math.sin(now / 400) * s * 0.03;
+    drawCrown(c, 0, cy, s * 0.26, "#ffd166");
+    for (var sp = 0; sp < 4 + extra; sp++) {
+      var sa = now / 700 + sp * (Math.PI * 2 / (4 + extra));
+      var sx = Math.cos(sa) * s * 0.55, sy = topY - s * 0.15 + Math.sin(sa) * s * 0.22;
+      var sr = s * (0.035 + 0.02 * Math.sin(now / 150 + sp));
+      c.fillStyle = sp % 2 ? '#fff6c4' : d.color2;
+      c.beginPath();
+      c.moveTo(sx, sy - sr * 2); c.lineTo(sx + sr * 0.6, sy); c.lineTo(sx, sy + sr * 2); c.lineTo(sx - sr * 0.6, sy);
+      c.closePath(); c.fill();
+    }
+  }
+
   if (t.frozen) {
     c.fillStyle = 'rgba(160,220,255,0.55)';
-    rrect(c, -s * 0.45, -s * 0.55, s * 0.9, s * 0.95, s * 0.12); c.fill();
+    rrect(c, -s * 0.5, topY - s * 0.6, s * 1.0, baseY - topY + s * 0.75, s * 0.12); c.fill();
     c.strokeStyle = '#e6f8ff'; c.lineWidth = 2; c.stroke();
   }
   c.restore();
