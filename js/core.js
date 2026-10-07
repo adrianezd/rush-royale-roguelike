@@ -2,8 +2,17 @@
    NÚCLEO: versión, novedades y utilidades compartidas
    Todos los scripts son clásicos y comparten el scope global.
    ========================================================= */
-var APP_VERSION = '2.1.0';
+var APP_VERSION = '2.2.0';
 var APP_PATCH_NOTES = [
+  {
+    v: '2.2.0', fecha: '7 oct 2026', titulo: 'Armas nuevas y tablero más grande',
+    notas: [
+      'Las doce armas rediseñadas: brasero de fuego, cristales de hielo, árbol arquero, bobina de Tesla, matraz de veneno, turbina, fusil, mortero, cristal arcano, dragón, reloj de arena con engranaje y matraz alquímico.',
+      'Botón ✕ para salir de la partida: guardar y salir, o abandonar.',
+      'El tablero se ve entero en el móvil: ocupa más pantalla y ya no se corta al seleccionar torres.',
+      'El panel de la torre flota sobre el tablero y la velocidad se cambia con un solo botón.'
+    ]
+  },
   {
     v: '2.1.0', fecha: '7 oct 2026', titulo: 'Torres nuevas y mejoras cómodas',
     notas: [

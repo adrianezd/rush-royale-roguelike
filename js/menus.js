@@ -41,7 +41,13 @@ function openModal(html) {
   m.innerHTML = '<div class="modal-card">' + html + '</div>';
   m.hidden = false;
 }
-function closeModal() { var m = $('modal'); if (m) m.hidden = true; }
+function closeModal() {
+  var m = $('modal');
+  if (!m) return;
+  m.hidden = true;
+  // Si era el aviso de salir de la partida, se reanuda el juego.
+  if (m.onQuitClose) { var f = m.onQuitClose; m.onQuitClose = null; f(); }
+}
 
 var SCREENS = {};
 
