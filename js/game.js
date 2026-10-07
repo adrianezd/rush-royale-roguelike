@@ -7,6 +7,10 @@ var START_LIVES = 16;
 var PASSIVE_MANA_PER_SEC = 4;
 var TWO_LANE_ENEMY_MULT = 1.4;
 var POWER_COSTS = [0, 60, 130, 230, 360];
+var BASE_MAX_MANA = 200;
+var MAX_MANA_PER_LEVEL = 40;
+// El maná que no cabe no se pierde: carga la habilidad del héroe.
+var OVERFLOW_MANA_PER_HERO = 120;
 var TD_SAVE_KEY = 'rushRoyaleRogue_save_v2';
 var gameSpeed = 1;
 
@@ -16,7 +20,7 @@ function freshMods() {
 function newGameState() {
   return {
     mode: 'classic', opts: {}, level: 1, maxLevel: 8, wave: 1, maxWaves: 3,
-    lives: START_LIVES, startLives: START_LIVES, mana: START_MANA, maxMana: 150,
+    lives: START_LIVES, startLives: START_LIVES, mana: START_MANA, maxMana: BASE_MAX_MANA, manaFullTime: 0,
     hero: 'aria', heroCharge: 0, deck: STARTER_TOWERS.slice(), cardLevels: {}, boons: [], rerolls: 1, phoenixUsed: false,
     mods: freshMods(), enemyMods: { hp: 1, speed: 1, armor: 0, count: 1 }, dailyMod: null,
     fusion: false, typePower: {}, summonCost: 20,
@@ -74,7 +78,14 @@ function hpScale() {
   if (game.stage && game.stage.hpMult) s *= game.stage.hpMult;
   return s;
 }
-function gainMana(n) { game.mana = Math.min(game.maxMana, game.mana + n); }
+function gainMana(n) {
+  var room = Math.max(0, game.maxMana - game.mana);
+  if (n <= room) { game.mana += n; return; }
+  game.mana = game.maxMana;
+  var extra = n - room;
+  if (game.heroCharge < 1) game.heroCharge = Math.min(1, game.heroCharge + extra / OVERFLOW_MANA_PER_HERO);
+}
+function manaIsFull() { return game.mana >= game.maxMana - 0.5; }
 
 function isBossWave() {
   if (game.mode === 'survival') return game.wave % 5 === 0;
@@ -222,6 +233,7 @@ function levelCleared() {
   if (game.level >= game.maxLevel) { winRun(); return; }
   game.level++;
   game.wave = 1;
+  game.maxMana += MAX_MANA_PER_LEVEL;
   updateCfgIndex();
   if (game.hero === 'sylva') { game.lives += 1; showToast('Sylva: +1 vida'); }
   setGridBiome(LEVEL_BIOME[(game.level - 1) % LEVEL_BIOME.length]);
@@ -484,6 +496,7 @@ function buildTowerRow() {
     row.appendChild(btn);
   });
   $('summonBtn').hidden = !game.fusion;
+  $('upgradeBtn').hidden = game.fusion;
 }
 function selectTower(type) {
   game.selectedTower = type;
@@ -507,14 +520,17 @@ function refreshPanel() {
       btns += '<span class="hint">Arrastra o toca otra igual para fusionar</span>';
     } else {
       var maxed = t.level >= TOWER_MAX_LEVEL;
-      btns += '<button class="mini-btn upgrade" onclick="upgradeSelectedTower()" ' + (maxed ? 'disabled' : '') + '>' + (maxed ? 'Máximo' : '▲ ' + t.upgradeCost() + ' 💧') + '</button>' +
+      btns += (maxed
+        ? '<button class="mini-btn upgrade" disabled>⭐ Nivel máximo</button>'
+        : '<button class="mini-btn upgrade big" id="panelUpgrade" data-cost="' + t.upgradeCost() + '" onclick="upgradeSelectedTower()">⬆ Nv ' + t.level + ' → ' + (t.level + 1) + ' · ' + t.upgradeCost() + ' 💧</button>') +
         '<button class="mini-btn sell" onclick="sellSelectedTower()">Vender ' + t.sellValue() + ' 💧</button>';
     }
     if (!d.support) btns += '<button class="mini-btn target" onclick="cycleTargeting()">🎯 ' + TARGET_LABELS[t.targeting] + '</button>';
     panel.innerHTML =
-      '<div class="tp-head"><img src="' + towerIconURL(t.type, 1) + '" alt=""><div><b>' + d.name + (game.fusion ? ' · Rango ' : ' · Nv ') + t.level + '</b>' +
-      '<small>' + stats + '</small><small>Daño total ' + fmt(t.dealt) + ' · Bajas ' + t.kills + '</small></div></div>' +
-      '<div class="tp-btns">' + btns + '</div>';
+      '<div class="tp-head"><img src="' + towerIconURL(t.type, Math.min(t.level, 5)) + '" alt=""><div><b>' + d.name + (game.fusion ? ' · Rango ' : ' · Nv ') + t.level + '</b>' +
+      '<small>' + stats + ' · Bajas ' + t.kills + '</small></div></div>' +
+      '<div class="tp-btns">' + btns + '</div>' +
+      (!game.fusion && t.level < TOWER_MAX_LEVEL ? '<span class="tp-tip">💡 Toca la torre otra vez para mejorarla</span>' : '');
     return;
   }
   if (game.fusion) {
@@ -525,17 +541,36 @@ function refreshPanel() {
   if (!s) { panel.innerHTML = ''; return; }
   panel.innerHTML = '<div class="tp-head"><img src="' + towerIconURL(game.selectedTower, 1) + '" alt=""><div><b>' + s.name + ' · ' + towerCost(game.selectedTower) + ' 💧</b><small>' + s.desc + '</small></div></div>';
 }
-function upgradeSelectedTower() {
-  var tower = game.selectedPlaced;
-  if (!tower || tower.level >= TOWER_MAX_LEVEL) return;
+function upgradeTower(tower) {
+  if (!tower) return false;
+  if (tower.level >= TOWER_MAX_LEVEL) { showToast('Ya está al nivel máximo'); return false; }
   var cost = tower.upgradeCost();
-  if (game.mana < cost) { showToast('Necesitas ' + cost + ' 💧'); sfxBlocked(); return; }
+  if (game.mana < cost) { showToast('Necesitas ' + cost + ' 💧'); sfxBlocked(); return false; }
   game.mana -= cost;
   tower.evolve();
   spawnRing(tower.x, tower.y, '#ffd166', grid.tileSize * 0.9, 0.3);
+  spawnParticles(tower.x, tower.y, '#7dffb0', 10, 90);
+  spawnText(tower.x, tower.y - grid.tileSize * 0.45, 'Nv ' + tower.level, '#7dffb0', true);
   sfxBuy();
   refreshPanel();
   saveRun();
+  return true;
+}
+function upgradeSelectedTower() { upgradeTower(game.selectedPlaced); }
+/** La torre mejorable más barata (para el botón de mejora rápida). */
+function cheapestUpgradeable() {
+  var best = null;
+  game.towers.forEach(function (t) {
+    if (t.level >= TOWER_MAX_LEVEL) return;
+    if (!best || t.upgradeCost() < best.upgradeCost() || (t.upgradeCost() === best.upgradeCost() && t.dealt > best.dealt)) best = t;
+  });
+  return best;
+}
+function quickUpgrade() {
+  if (game.fusion || game.ended) return;
+  var t = cheapestUpgradeable();
+  if (!t) { showToast(game.towers.length ? 'Todas tus torres están al máximo' : 'Coloca primero alguna torre'); return; }
+  upgradeTower(t);
 }
 function sellSelectedTower() {
   var tower = game.selectedPlaced;
@@ -558,6 +593,20 @@ function updateUI() {
   setText('lives', game.lives);
   setText('hudLabel', hudLabel());
   $('manaBar').style.width = clamp((game.mana / game.maxMana) * 100, 0, 100) + '%';
+  setText('manaMax', '/' + Math.round(game.maxMana));
+  var full = manaIsFull();
+  $('manaBar').parentNode.classList.toggle('full', full);
+  $('hudMana').classList.toggle('full', full);
+  var pu = $('panelUpgrade');
+  if (pu) pu.classList.toggle('poor', game.mana < +pu.dataset.cost);
+  if (!game.fusion) {
+    var cheap = cheapestUpgradeable();
+    var ub = $('upgradeBtn');
+    setText('upgradeCost', cheap ? cheap.upgradeCost() + ' 💧' : '—');
+    ub.disabled = !cheap;
+    ub.classList.toggle('poor', !cheap || game.mana < cheap.upgradeCost());
+    ub.classList.toggle('urge', !!cheap && full && game.mana >= cheap.upgradeCost());
+  }
   game.deck.forEach(function (id) {
     var chip = document.querySelector('.tower-chip[data-tower="' + id + '"]');
     if (!chip) return;
@@ -568,6 +617,7 @@ function updateUI() {
     var sb = $('summonBtn');
     setText('summonCost', game.summonCost);
     sb.classList.toggle('poor', game.mana < game.summonCost);
+    sb.classList.toggle('urge', full && game.mana >= game.summonCost);
   }
   var hb = $('heroBtn');
   var pct = clamp(game.heroCharge, 0, 1);
@@ -634,7 +684,9 @@ function handleTap(x, y) {
     return;
   }
   if (existing) {
-    game.selectedPlaced = game.selectedPlaced === existing ? null : existing;
+    // Segundo toque sobre la torre seleccionada = mejorarla.
+    if (game.selectedPlaced === existing) { upgradeTower(existing); return; }
+    game.selectedPlaced = existing;
     refreshPanel();
     return;
   }
@@ -781,6 +833,9 @@ function drawFrame(now) {
   });
   var ens = game.enemies.slice().sort(function (a, b) { return a.y - b.y; });
   ens.forEach(function (e) { if (!e.dead) e.draw(now); });
+  // etiqueta de mejora por encima de todo
+  var selT = game.selectedPlaced;
+  if (selT && !game.fusion && selT.level < TOWER_MAX_LEVEL && game.towers.indexOf(selT) !== -1) drawUpgradeCostTag(selT, ts);
   drawProjectiles();
   drawShots();
   drawEffects();
