@@ -546,12 +546,12 @@ function drawUpgradeCostTag(t, ts) {
   var label = '⬆ ' + cost + ' 💧';
   ctx.font = 'bold ' + Math.round(Math.max(11, ts * 0.24)) + 'px "Segoe UI", Arial';
   var w = ctx.measureText(label).width + 14, h = Math.max(18, ts * 0.36);
-  var x = t.x - w / 2, y = grid.offsetY + t.row * ts - h - 4;
+  var x = clamp(t.x - w / 2, 2, grid.w - w - 2), y = grid.offsetY + t.row * ts - h - 4;
   if (y < grid.offsetY) y = grid.offsetY + t.row * ts + ts + 4;
   rrect(ctx, x, y, w, h, h / 2);
   ctx.fillStyle = ok ? '#2ecc71' : 'rgba(30,30,40,0.9)'; ctx.fill();
   ctx.lineWidth = 1.5; ctx.strokeStyle = ok ? '#eafff2' : '#ff8fa3'; ctx.stroke();
   ctx.fillStyle = ok ? '#06261a' : '#ff8fa3';
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.fillText(label, t.x, y + h / 2 + 1);
+  ctx.fillText(label, x + w / 2, y + h / 2 + 1);
 }

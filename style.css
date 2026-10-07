@@ -626,7 +626,7 @@ input { font-family: inherit; user-select: text; -webkit-user-select: text; }
 .boon-desc { font-size: 0.7rem; color: #d0d6e2; line-height: 1.35; }
 
 /* =================== PARTIDA =================== */
-#gameScreen { display: flex; flex-direction: column; height: 100dvh; }
+#gameScreen { display: flex; flex-direction: column; height: 100vh; height: 100dvh; overflow: hidden; }
 #hud {
   flex: 0 0 auto;
   display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
@@ -654,6 +654,7 @@ input { font-family: inherit; user-select: text; -webkit-user-select: text; }
 .hud-btns { display: flex; gap: 4px; }
 .hud-btn { border: none; background: rgba(0,0,0,0.3); border-radius: 50%; width: 32px; height: 32px; font-size: 0.95rem; cursor: pointer; }
 .hud-btn.on { background: var(--teal); }
+.hud-btn.hud-quit { background: rgba(233,69,96,0.35); color: #fff; font-weight: 800; }
 .speed-group {
   display: flex; gap: 2px;
   background: rgba(0,0,0,0.28);
@@ -839,12 +840,46 @@ canvas { display: block; touch-action: none; }
 
 /* Móvil: el panel de la torre ocupa todo el ancho y los botones van debajo */
 @media (max-width: 819px), (max-height: 519px) {
-  #actionRow { flex-wrap: wrap; }
-  #panelInfo { flex: 1 1 100%; min-height: 0; }
-  #panelInfo:empty { display: none; }
+  .speed-group { display: none; }
+  #hud { flex-wrap: nowrap; gap: 4px; padding-left: 8px; padding-right: 8px; }
+  .hud-item { padding: 5px 8px; font-size: 0.78rem; }
+  #hudLevel { flex: 1 1 auto; min-width: 0; justify-content: center; overflow: hidden; }
+  #hudLevel span { overflow: hidden; text-overflow: ellipsis; }
+  #controls { gap: 6px; padding-top: 6px; }
+  .tower-icon { width: 32px; height: 32px; }
+  .tower-chip { padding: 3px 2px; }
   .action-btns { flex: 1 1 100%; }
-  .action-btns .btn-upgrade, .action-btns .btn-start, .action-btns .btn-summon { flex: 1 1 0; }
+  .action-btns .btn-upgrade, .action-btns .btn-start, .action-btns .btn-summon { flex: 1 1 0; height: 50px; }
+  .hero-btn { width: 50px; height: 50px; }
+  #board-wrap > #panelInfo {
+    position: absolute; left: 8px; right: 8px; bottom: 8px; z-index: 5;
+    background: rgba(10, 16, 34, 0.94);
+    border: 1px solid rgba(78, 205, 196, 0.45); border-left: 3px solid var(--teal);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+    backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+    min-height: 0;
+  }
+  #board-wrap > #panelInfo.at-top { bottom: auto; top: 8px; }
+  #board-wrap > #panelInfo:not(.has-tower) { display: none; }
 }
+.board-label { display: none; }
+@media (max-width: 819px), (max-height: 519px) {
+  #hudLevel { display: none; }
+  .board-label {
+    display: block; position: absolute; top: 6px; left: 8px; z-index: 3; pointer-events: none;
+    font-size: 0.7rem; font-weight: 800; color: var(--gold);
+    background: rgba(6, 10, 18, 0.72); padding: 3px 9px; border-radius: 12px;
+  }
+}
+@media (max-width: 400px) {
+  .wide-only { display: none; }
+  #hudSound { display: none; }
+  .hud-btn { width: 30px; height: 30px; font-size: 0.85rem; }
+  .hud-item { padding: 4px 7px; font-size: 0.74rem; }
+  .mana-max { display: none; }
+}
+.hud-btn.hud-speed { width: auto; min-width: 36px; padding: 0 8px; border-radius: 16px; color: #fff; font-weight: 800; font-size: 0.78rem; display: none; }
+@media (max-width: 819px), (max-height: 519px) { .hud-btn.hud-speed { display: inline-block; } }
 
 /* =================== PANTALLAS ESTRECHAS =================== */
 @media (max-width: 380px) {

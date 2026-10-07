@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=202610071200">
+  <link rel="stylesheet" href="style.css?v=202610071700">
 </head>
 <body>
   <div id="menuRoot" class="menu-screen"></div>
@@ -23,9 +23,11 @@
       <div class="hud-item" id="hudLives"><span class="hud-icon">❤</span><span id="lives">16</span></div>
       <div class="hud-item" id="hudLevel"><span id="hudLabel"></span></div>
       <div class="hud-btns">
+        <button class="hud-btn hud-speed" id="hudSpeed" onclick="cycleGameSpeed()" title="Velocidad">x1</button>
         <button class="hud-btn" id="hudAuto" onclick="toggleAutoWave()" title="Olas automáticas">⏩</button>
         <button class="hud-btn" id="hudSound" onclick="toggleSound()" title="Sonido">🔊</button>
         <button class="hud-btn" id="hudPause" onclick="togglePause()" title="Pausa">⏸</button>
+        <button class="hud-btn hud-quit" id="hudQuit" onclick="confirmQuit()" title="Salir de la partida" aria-label="Salir de la partida">✕</button>
       </div>
       <div class="speed-group" id="speedGroup">
         <button class="speed-btn selected" data-speed="1" onclick="setGameSpeed(1)">x1</button>
@@ -37,6 +39,7 @@
 
     <div id="board-wrap">
       <canvas id="gameCanvas"></canvas>
+      <div id="boardLabel" class="board-label"></div>
       <div id="bossBar"><span id="bossName">Jefe</span><div class="bar"><div class="fill" id="bossFill"></div></div></div>
       <div id="bigBanner"><span id="bigBannerText"></span></div>
       <div id="flash"></div>
@@ -73,16 +76,16 @@
   <div id="chestOverlay" class="overlay chest-overlay" hidden></div>
   <div id="modal" class="overlay" hidden></div>
 
-  <script src="js/core.js?v=202610071200"></script>
-  <script src="js/data.js?v=202610071200"></script>
-  <script src="js/meta.js?v=202610071200"></script>
-  <script src="js/sound.js?v=202610071200"></script>
-  <script src="js/grid.js?v=202610071200"></script>
-  <script src="js/draw.js?v=202610071200"></script>
-  <script src="js/entities.js?v=202610071200"></script>
-  <script src="js/game.js?v=202610071200"></script>
-  <script src="js/modes.js?v=202610071200"></script>
-  <script src="js/menus.js?v=202610071200"></script>
-  <script src="js/init.js?v=202610071200"></script>
+  <script src="js/core.js?v=202610071700"></script>
+  <script src="js/data.js?v=202610071700"></script>
+  <script src="js/meta.js?v=202610071700"></script>
+  <script src="js/sound.js?v=202610071700"></script>
+  <script src="js/grid.js?v=202610071700"></script>
+  <script src="js/draw.js?v=202610071700"></script>
+  <script src="js/entities.js?v=202610071700"></script>
+  <script src="js/game.js?v=202610071700"></script>
+  <script src="js/modes.js?v=202610071700"></script>
+  <script src="js/menus.js?v=202610071700"></script>
+  <script src="js/init.js?v=202610071700"></script>
 </body>
 </html>

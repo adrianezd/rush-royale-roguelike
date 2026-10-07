@@ -192,11 +192,16 @@ function layoutGrid() {
   var w = boardWrap.clientWidth || 360;
   var h = boardWrap.clientHeight || 360;
   var dpr = window.devicePixelRatio || 1;
-  var tileSize = Math.floor(Math.min(w / grid.cols, h / grid.rows));
+  // Se deja medio hueco de casilla arriba para lo que sobresale de las torres
+  // de la primera fila (banderas, coronas, números).
+  var TOP_ROOM = 0.45;
+  var tileSize = Math.floor(Math.min(w / grid.cols, h / (grid.rows + TOP_ROOM)));
   tileSize = Math.max(18, tileSize);
   grid.tileSize = tileSize;
   grid.offsetX = Math.floor((w - tileSize * grid.cols) / 2);
-  grid.offsetY = Math.floor((h - tileSize * grid.rows) / 2);
+  var spare = h - tileSize * grid.rows;
+  grid.offsetY = Math.floor(Math.max(tileSize * TOP_ROOM * 0.8, spare / 2));
+  if (grid.offsetY + tileSize * grid.rows > h) grid.offsetY = Math.max(0, h - tileSize * grid.rows);
   grid.w = w; grid.h = h; grid.dpr = dpr;
   canvas.style.width = w + 'px';
   canvas.style.height = h + 'px';

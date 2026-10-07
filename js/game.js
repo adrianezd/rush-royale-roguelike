@@ -523,9 +523,11 @@ function refreshPanel() {
       btns += (maxed
         ? '<button class="mini-btn upgrade" disabled>⭐ Nivel máximo</button>'
         : '<button class="mini-btn upgrade big" id="panelUpgrade" data-cost="' + t.upgradeCost() + '" onclick="upgradeSelectedTower()">⬆ Nv ' + t.level + ' → ' + (t.level + 1) + ' · ' + t.upgradeCost() + ' 💧</button>') +
-        '<button class="mini-btn sell" onclick="sellSelectedTower()">Vender ' + t.sellValue() + ' 💧</button>';
+        '<button class="mini-btn sell" onclick="sellSelectedTower()"><span class="wide-only">Vender </span>' + t.sellValue() + ' 💧</button>';
     }
-    if (!d.support) btns += '<button class="mini-btn target" onclick="cycleTargeting()">🎯 ' + TARGET_LABELS[t.targeting] + '</button>';
+    if (!d.support) btns += '<button class="mini-btn target" onclick="cycleTargeting()" title="Prioridad de disparo">🎯<span class="wide-only"> ' + TARGET_LABELS[t.targeting] + '</span></button>';
+    panel.classList.add('has-tower');
+    panel.classList.toggle('at-top', t.row >= grid.rows / 2);
     panel.innerHTML =
       '<div class="tp-head"><img src="' + towerIconURL(t.type, Math.min(t.level, 5)) + '" alt=""><div><b>' + d.name + (game.fusion ? ' · Rango ' : ' · Nv ') + t.level + '</b>' +
       '<small>' + stats + ' · Bajas ' + t.kills + '</small></div></div>' +
@@ -533,6 +535,7 @@ function refreshPanel() {
       (!game.fusion && t.level < TOWER_MAX_LEVEL ? '<span class="tp-tip">💡 Toca la torre otra vez para mejorarla</span>' : '');
     return;
   }
+  panel.classList.remove('has-tower', 'at-top');
   if (game.fusion) {
     panel.innerHTML = '<b>🧬 Fusión</b><br>Invoca torres al azar de tu mazo y junta dos iguales del mismo rango. Toca una carta para potenciar ese tipo.';
     return;
@@ -592,6 +595,7 @@ function updateUI() {
   setText('manaText', Math.floor(game.mana));
   setText('lives', game.lives);
   setText('hudLabel', hudLabel());
+  setText('boardLabel', hudLabel());
   $('manaBar').style.width = clamp((game.mana / game.maxMana) * 100, 0, 100) + '%';
   setText('manaMax', '/' + Math.round(game.maxMana));
   var full = manaIsFull();
@@ -881,6 +885,7 @@ function tick(ts) {
       $('bossFill').style.width = clamp((boss.health / boss.maxHealth) * 100, 0, 100) + '%';
       bossBar.classList.toggle('shielded', !!boss.shielded);
     } else bossBar.classList.remove('show');
+    $('boardLabel').style.visibility = boss ? 'hidden' : '';
   }
   requestAnimationFrame(tick);
 }
@@ -1043,6 +1048,7 @@ function togglePause(force) {
     '<h3>Bendiciones</h3><div class="boon-chips">' + (boons || '<small class="muted">Aún ninguna</small>') + '</div>' +
     '<div class="pause-stats"><span>⚔️ ' + game.kills + ' bajas</span><span>👑 ' + game.bossKills + ' jefes</span><span>💥 ' + fmt(game.damageDealt) + ' daño</span></div>' +
     '<label class="toggle-row"><input type="checkbox" ' + (meta.settings.dmgNumbers ? 'checked' : '') + ' onchange="setSetting(\'dmgNumbers\', this.checked)"> Números de daño</label>' +
+    '<label class="toggle-row"><input type="checkbox" ' + (soundOn ? 'checked' : '') + ' onchange="if (this.checked !== soundOn) toggleSound()"> Sonido</label>' +
     '<label class="toggle-row"><input type="checkbox" ' + (meta.settings.autoWave ? 'checked' : '') + ' onchange="setSetting(\'autoWave\', this.checked)"> Olas automáticas</label>' +
     '<button class="menu-btn menu-btn-primary" onclick="togglePause(false)">Continuar</button>' +
     '<button class="menu-btn" onclick="exitToMenu()">Guardar y salir</button>' +
@@ -1055,6 +1061,26 @@ function toggleAutoWave() {
   meta.settings.autoWave = !meta.settings.autoWave;
   saveMeta();
   showToast(meta.settings.autoWave ? 'Olas automáticas activadas' : 'Olas automáticas desactivadas');
+}
+/** Botón ✕ de la barra superior: salir de la partida con confirmación. */
+function confirmQuit() {
+  if (game.ended) { go('home'); return; }
+  var wasPaused = game.paused;
+  game.paused = true;
+  var m = $('modal');
+  m.innerHTML =
+    '<div class="end-card quit-card">' +
+    '<h2>¿Salir de la partida?</h2>' +
+    '<p>' + (game.isWaveActive ? 'La partida se guardó al empezar esta ola: si sales ahora, volverás a ese punto.' : 'Tu partida está guardada y podrás continuarla desde el menú.') + '</p>' +
+    '<button class="menu-btn menu-btn-primary" id="quitStay">Seguir jugando</button>' +
+    '<button class="menu-btn" id="quitSave">💾 Guardar y salir</button>' +
+    '<button class="menu-btn danger" id="quitAbandon">🏳️ Abandonar partida</button>' +
+    '</div>';
+  m.hidden = false;
+  m.onQuitClose = function () { game.paused = wasPaused; };
+  $('quitStay').onclick = function () { closeModal(); };
+  $('quitSave').onclick = function () { m.onQuitClose = null; m.hidden = true; exitToMenu(); };
+  $('quitAbandon').onclick = function () { m.onQuitClose = null; m.hidden = true; game.paused = false; abandonRun(); };
 }
 function exitToMenu() {
   game.paused = false;
@@ -1070,9 +1096,13 @@ function abandonRun() {
   game.ended = true;
   endRun(false);
 }
+var SPEED_STEPS = [1, 2, 4, 8];
+function cycleGameSpeed() { setGameSpeed(SPEED_STEPS[(SPEED_STEPS.indexOf(gameSpeed) + 1) % SPEED_STEPS.length]); }
 function setGameSpeed(mult) {
   gameSpeed = mult;
   Array.prototype.forEach.call(document.querySelectorAll('.speed-btn'), function (b) { b.classList.toggle('selected', +b.dataset.speed === mult); });
+  var hs = $('hudSpeed');
+  if (hs) { hs.textContent = 'x' + mult; hs.classList.toggle('on', mult > 1); }
 }
 
 /* ---------- fin de partida y recompensas ---------- */
